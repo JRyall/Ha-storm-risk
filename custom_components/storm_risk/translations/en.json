@@ -6,13 +6,11 @@
         "description": "Storm Risk polls the free Open-Meteo API for convective forecast data. Enter a name and the coordinates to monitor. Add the integration again to track additional locations.",
         "data": {
           "name": "Name",
-          "latitude": "Latitude",
-          "longitude": "Longitude"
+          "location": "Location"
         },
         "data_description": {
           "name": "A friendly name for this location (e.g. Home, Work).",
-          "latitude": "Decimal degrees, -90 to 90.",
-          "longitude": "Decimal degrees, -180 to 180."
+          "location": "Drag the marker to the point you want to monitor. Defaults to your Home Assistant location."
         }
       }
     },
@@ -55,6 +53,7 @@
       "cape_peak_hour": { "name": "CAPE peak hour today" },
       "temperature": { "name": "Temperature" },
       "dew_point": { "name": "Dew point" },
+      "cape_outlook": { "name": "CAPE max (7 day)" },
       "storm_risk": { "name": "Storm risk" }
     }
   }

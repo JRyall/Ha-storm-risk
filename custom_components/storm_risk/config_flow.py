@@ -14,6 +14,7 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
+    LocationSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -25,6 +26,7 @@ from .const import (
     CONF_CIN_DIVISOR,
     CONF_DEW_POINT_MULTIPLIER,
     CONF_LATITUDE,
+    CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_NAME,
     CONF_THRESHOLD_HIGH,
@@ -39,22 +41,6 @@ from .const import (
     DEFAULT_THRESHOLD_MEDIUM,
     DOMAIN,
 )
-
-
-def _latitude_selector() -> NumberSelector:
-    return NumberSelector(
-        NumberSelectorConfig(
-            min=-90, max=90, step=0.0001, mode=NumberSelectorMode.BOX
-        )
-    )
-
-
-def _longitude_selector() -> NumberSelector:
-    return NumberSelector(
-        NumberSelectorConfig(
-            min=-180, max=180, step=0.0001, mode=NumberSelectorMode.BOX
-        )
-    )
 
 
 def _positive_number_selector() -> NumberSelector:
@@ -81,8 +67,9 @@ class StormRiskConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            latitude = user_input[CONF_LATITUDE]
-            longitude = user_input[CONF_LONGITUDE]
+            location = user_input[CONF_LOCATION]
+            latitude = location[CONF_LATITUDE]
+            longitude = location[CONF_LONGITUDE]
 
             # One config entry per coordinate pair; allow multiple distinct
             # locations (home, work, ...).
@@ -103,11 +90,12 @@ class StormRiskConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
                 vol.Required(
-                    CONF_LATITUDE, default=self.hass.config.latitude
-                ): _latitude_selector(),
-                vol.Required(
-                    CONF_LONGITUDE, default=self.hass.config.longitude
-                ): _longitude_selector(),
+                    CONF_LOCATION,
+                    default={
+                        CONF_LATITUDE: self.hass.config.latitude,
+                        CONF_LONGITUDE: self.hass.config.longitude,
+                    },
+                ): LocationSelector(),
             }
         )
 

@@ -28,9 +28,9 @@ API_HOURLY_VARIABLES: Final = (
     "wind_direction_10m",
 )
 
-# Two days of hourly data gives us "now" plus a 24h look-ahead even late in
-# the day, without indexing past the end of the array.
-API_FORECAST_DAYS: Final = 2
+# Seven days of hourly data powers the 7-day outlook while still giving us
+# "now" plus a 24h look-ahead even late in the day.
+API_FORECAST_DAYS: Final = 7
 
 # The data is a model forecast that only refreshes hourly upstream; 30 minutes
 # is plenty and keeps us well within Open-Meteo's free-tier fair-use limits.
@@ -39,9 +39,16 @@ UPDATE_INTERVAL: Final = timedelta(minutes=30)
 # How many hours ahead "today" looks for the max / peak-hour sensors.
 LOOK_AHEAD_HOURS: Final = 24
 
+# How many hours of hourly data to expose as the graphable forecast attribute.
+FORECAST_HOURS: Final = 24
+
+# How many days the 7-day outlook covers.
+OUTLOOK_DAYS: Final = 7
+
 # --- Configuration / options keys --------------------------------------------
 
 CONF_NAME: Final = "name"
+CONF_LOCATION: Final = "location"
 CONF_LATITUDE: Final = "latitude"
 CONF_LONGITUDE: Final = "longitude"
 

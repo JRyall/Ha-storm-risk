@@ -87,6 +87,16 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         value_fn=lambda data: data.dew_point,
     ),
     StormRiskSensorDescription(
+        key="cape_outlook",
+        translation_key="cape_outlook",
+        native_unit_of_measurement=UNIT_JOULES_PER_KG,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:calendar-week",
+        suggested_display_precision=0,
+        value_fn=lambda data: data.cape_outlook_max,
+        attributes_fn=lambda data: {"daily": data.daily_outlook},
+    ),
+    StormRiskSensorDescription(
         key="storm_risk",
         translation_key="storm_risk",
         native_unit_of_measurement="%",
@@ -99,6 +109,8 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cin_score": data.cin_score,
             "dp_score": data.dp_score,
             "level": data.level,
+            # Next-24h series for ApexCharts / history graphing.
+            "forecast": data.forecast,
         },
     ),
 )

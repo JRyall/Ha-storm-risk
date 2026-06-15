@@ -39,11 +39,13 @@ from .const import (
     DEFAULT_THRESHOLD_MEDIUM,
     DEW_POINT_OFFSET,
     DOMAIN,
+    FORECAST_HOURS,
     LEVEL_LOADED,
     LEVEL_MEANINGFUL,
     LEVEL_NONE,
     LEVEL_PRESENT,
     LOOK_AHEAD_HOURS,
+    OUTLOOK_DAYS,
     SCORE_CAP,
     UPDATE_INTERVAL,
 )
@@ -81,6 +83,10 @@ class StormRiskData:
     cin_score: float
     dp_score: float
     level: str
+    # v2: graphable forecast + multi-day outlook.
+    forecast: list[dict[str, Any]]
+    cape_outlook_max: float
+    daily_outlook: list[dict[str, Any]]
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -178,6 +184,13 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             cape_peak_hour = times[index][11:16]
 
         scores = self._score(cape_now, cin_now, dew_now)
+        forecast = self._build_forecast(times, cape, cin, dew, index)
+        daily_outlook = self._build_outlook(times, cape, cin, dew)
+        cape_outlook_max = (
+            max(day["cape_max"] for day in daily_outlook)
+            if daily_outlook
+            else round(cape_now, 1)
+        )
 
         return StormRiskData(
             cape_now=round(cape_now, 1),
@@ -188,8 +201,83 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             dew_point=round(dew_now, 1),
             wind_speed=round(_value(wind_speed, index), 1),
             wind_direction=round(_value(wind_dir, index)),
+            forecast=forecast,
+            cape_outlook_max=cape_outlook_max,
+            daily_outlook=daily_outlook,
             **scores,
         )
+
+    def _build_forecast(
+        self,
+        times: list[str],
+        cape: list[float | None],
+        cin: list[float | None],
+        dew: list[float | None],
+        index: int,
+    ) -> list[dict[str, Any]]:
+        """Build the next-``FORECAST_HOURS`` hourly series for graphing.
+
+        Each entry carries the local timestamp plus CAPE, CIN, and the
+        per-hour Storm Risk score so a single attribute can drive several
+        charts. Hours missing any ingredient are skipped.
+        """
+        end = min(index + FORECAST_HOURS, len(times))
+        forecast: list[dict[str, Any]] = []
+        for i in range(index, end):
+            cape_i, cin_i, dew_i = cape[i], cin[i], dew[i]
+            if cape_i is None or cin_i is None or dew_i is None:
+                continue
+            cape_s, cin_s, dp_s = self._score_components(cape_i, cin_i, dew_i)
+            forecast.append(
+                {
+                    "datetime": times[i],
+                    "cape": round(cape_i, 1),
+                    "cin": round(cin_i, 1),
+                    "storm_risk": round(cape_s + cin_s + dp_s),
+                }
+            )
+        return forecast
+
+    def _build_outlook(
+        self,
+        times: list[str],
+        cape: list[float | None],
+        cin: list[float | None],
+        dew: list[float | None],
+    ) -> list[dict[str, Any]]:
+        """Aggregate the hourly series into a per-day outlook (max CAPE etc.).
+
+        Days preserve chronological order; the result is capped at
+        ``OUTLOOK_DAYS`` entries.
+        """
+        days: dict[str, dict[str, Any]] = {}
+        for i, stamp in enumerate(times):
+            cape_i = cape[i]
+            if cape_i is None:
+                continue
+            date = stamp[:10]
+            cin_i, dew_i = cin[i], dew[i]
+            storm_risk = 0
+            if cin_i is not None and dew_i is not None:
+                cape_s, cin_s, dp_s = self._score_components(cape_i, cin_i, dew_i)
+                storm_risk = round(cape_s + cin_s + dp_s)
+
+            day = days.get(date)
+            if day is None:
+                days[date] = {
+                    "date": date,
+                    "cape_max": round(cape_i, 1),
+                    "cape_peak_hour": stamp[11:16],
+                    "storm_risk_max": storm_risk,
+                }
+                continue
+            if cape_i > day["cape_max"]:
+                day["cape_max"] = round(cape_i, 1)
+                day["cape_peak_hour"] = stamp[11:16]
+            if storm_risk > day["storm_risk_max"]:
+                day["storm_risk_max"] = storm_risk
+
+        return list(days.values())[:OUTLOOK_DAYS]
 
     def _current_index(self, times: list[str], utc_offset_seconds: int) -> int:
         """Return the index in ``times`` matching the current local hour.
@@ -207,10 +295,14 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             # Fall back to hour-of-day from midnight, clamped to the array.
             return min(local_now.hour, len(times) - 1)
 
-    def _score(
+    def _score_components(
         self, cape: float, cin: float, dew_point: float
-    ) -> dict[str, Any]:
-        """Compute the composite storm-risk score and its components."""
+    ) -> tuple[float, float, float]:
+        """Return the (cape, cin, dew point) score components, each 0..33.
+
+        Reads the (possibly user-overridden) scoring constants fresh so the
+        same maths backs the live score, the hourly forecast, and the outlook.
+        """
         cape_divisor = float(self._option(CONF_CAPE_DIVISOR, DEFAULT_CAPE_DIVISOR))
         cin_divisor = float(self._option(CONF_CIN_DIVISOR, DEFAULT_CIN_DIVISOR))
         dp_multiplier = float(
@@ -220,7 +312,13 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cape_score = clamp(cape / cape_divisor, 0.0, SCORE_CAP)
         cin_score = clamp((CIN_OFFSET + cin) / cin_divisor, 0.0, SCORE_CAP)
         dp_score = clamp((dew_point - DEW_POINT_OFFSET) * dp_multiplier, 0.0, SCORE_CAP)
+        return cape_score, cin_score, dp_score
 
+    def _score(
+        self, cape: float, cin: float, dew_point: float
+    ) -> dict[str, Any]:
+        """Compute the composite storm-risk score and its components."""
+        cape_score, cin_score, dp_score = self._score_components(cape, cin, dew_point)
         storm_risk = round(cape_score + cin_score + dp_score)
 
         return {

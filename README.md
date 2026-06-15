@@ -37,10 +37,31 @@ them into a single 0–100 score.
 | **CAPE peak hour today** | `HH:MM` | The local time at which CAPE is forecast to peak. |
 | **Temperature** | °C | Current 2 m air temperature. |
 | **Dew point** | °C | Current 2 m dew point — a direct measure of low-level moisture. |
+| **CAPE max (7 day)** | J/kg | Highest CAPE anywhere in the next 7 days; per-day breakdown in attributes. |
 | **Storm risk** | % | Composite 0–100 score from CAPE, CIN, and dew point (see below). |
 
 The **Storm risk** sensor also exposes `cape_score`, `cin_score`, `dp_score`,
-and `level` as state attributes so you can see exactly how the score was built.
+and `level` as state attributes so you can see exactly how the score was built,
+plus a `forecast` attribute: the next 24 hours as a list of
+`{datetime, cape, cin, storm_risk}` for graphing (see
+[Forecast graphs](#forecast-graphs-apexcharts)).
+
+The **CAPE max (7 day)** sensor exposes a `daily` attribute — a list of
+`{date, cape_max, cape_peak_hour, storm_risk_max}`, one entry per day — for a
+week-ahead outlook.
+
+> **Recorder note:** the `forecast` and `daily` attributes are lists that
+> change every poll. If you want to keep your history database lean, exclude
+> them from the recorder (you keep the sensor states, just not the big
+> attributes):
+>
+> ```yaml
+> recorder:
+>   exclude:
+>     entity_globs:
+>       - sensor.*_storm_risk
+>       - sensor.*_cape_max_7_day
+> ```
 
 ### Reading the numbers — a climatological scale
 
@@ -134,8 +155,8 @@ Configuration is entirely through the UI — there is no YAML.
 
 1. Go to **Settings → Devices & services → Add integration**.
 2. Search for **Storm Risk**.
-3. Enter a **name** (e.g. `Home`), and the **latitude** and **longitude** to
-   monitor. The fields default to your Home Assistant location.
+3. Enter a **name** (e.g. `Home`) and drag the marker on the **map** to the
+   point you want to monitor. The map starts at your Home Assistant location.
 
 ![Config flow](docs/screenshots/config_flow.png)
 
@@ -187,6 +208,61 @@ cards:
 
 > Entity IDs depend on the name you chose during setup. Check
 > **Settings → Devices & services → Storm Risk** for the exact IDs.
+
+### Forecast graphs (ApexCharts)
+
+The Storm risk sensor carries a `forecast` attribute (next 24 hours), which
+[apexcharts-card](https://github.com/RomRider/apexcharts-card) (installable via
+HACS) can plot directly. This graphs the composite score and CAPE side by side:
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Storm risk — next 24h
+graph_span: 24h
+series:
+  - entity: sensor.home_storm_risk
+    name: Storm risk
+    type: area
+    data_generator: |
+      return entity.attributes.forecast.map(p => {
+        return [new Date(p.datetime).getTime(), p.storm_risk];
+      });
+  - entity: sensor.home_storm_risk
+    name: CAPE
+    type: line
+    yaxis_id: cape
+    data_generator: |
+      return entity.attributes.forecast.map(p => {
+        return [new Date(p.datetime).getTime(), p.cape];
+      });
+yaxis:
+  - id: risk
+    min: 0
+    max: 100
+  - id: cape
+    opposite: true
+    min: 0
+```
+
+For the week ahead, plot the `daily` attribute of the **CAPE max (7 day)**
+sensor:
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: CAPE outlook — 7 days
+series:
+  - entity: sensor.home_cape_max_7_day
+    name: Daily max CAPE
+    type: column
+    data_generator: |
+      return entity.attributes.daily.map(d => {
+        return [new Date(d.date).getTime(), d.cape_max];
+      });
+```
 
 ---
 
