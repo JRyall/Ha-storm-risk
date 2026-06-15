@@ -192,9 +192,30 @@ Changing options reloads the integration, so new values apply immediately.
 
 ---
 
+## The Storm Risk card
+
+The integration **bundles a custom Lovelace card** and registers it
+automatically — there's nothing extra to install and no dashboard resource to
+add by hand. It shows a risk gauge, the three-ingredient score breakdown, and a
+24-hour forecast sparkline, all from the single Storm Risk sensor.
+
+Add it from the dashboard card picker (search "Storm Risk"), or in YAML:
+
+```yaml
+type: custom:storm-risk-card
+entity: sensor.storm_risk_storm_risk
+# Optional:
+# name: Storm Risk — Home
+# show_breakdown: true
+# show_forecast: true
+```
+
+> If the card doesn't appear right after install, do a hard refresh of the
+> browser (Ctrl/Cmd-Shift-R) so the frontend picks up the new resource.
+
 ## Example dashboard card
 
-A simple entities + gauge card:
+Prefer to build it from stock cards? A simple entities + gauge card:
 
 ```yaml
 type: vertical-stack

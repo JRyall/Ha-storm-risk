@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-15
+
+### Added
+
+- **Bundled Lovelace card** (`custom:storm-risk-card`): a self-contained card
+  showing a risk gauge, the CAPE/CIN/dew-point score breakdown, and a 24h
+  forecast sparkline — all from the single Storm Risk sensor. The integration
+  serves and auto-registers it on the frontend, so there is no separate
+  install and no manual dashboard resource to add. It also appears in the card
+  picker.
+
+[1.3.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.3.0
+
 ## [1.2.0] - 2026-06-15
 
 ### Fixed
