@@ -118,7 +118,9 @@ class StormRiskCard extends HTMLElement {
             transform="rotate(${rotate} 60 60)"></circle>
         </svg>
         <div class="value" style="color:${color}">
-          <span class="num">${unavailable ? "–" : risk}</span><span class="pct">%</span>
+          <span class="value-inner"><span class="num">${
+            unavailable ? "–" : risk
+          }</span><span class="pct">%</span></span>
         </div>
       </div>`;
   }
@@ -187,8 +189,9 @@ class StormRiskCard extends HTMLElement {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
         }
-        .value .num { font-size: 2.2rem; font-weight: 600; line-height: 1; }
-        .value .pct { font-size: 1rem; margin-left: 2px; align-self: flex-start; margin-top: 6px; }
+        .value-inner { line-height: 1; white-space: nowrap; }
+        .value .num { font-size: 2.2rem; font-weight: 600; }
+        .value .pct { font-size: 1rem; font-weight: 600; vertical-align: super; margin-left: 1px; }
         .breakdown { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
         .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
         .bar-label { width: 48px; color: var(--secondary-text-color); }

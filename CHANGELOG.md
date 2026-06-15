@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-06-15
+
+### Fixed
+
+- Storm Risk card: the `%` sign in the gauge now sits next to the number as a
+  superscript instead of floating to the top of the gauge.
+
+[1.3.1]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.3.1
+
 ## [1.3.0] - 2026-06-15
 
 ### Added
