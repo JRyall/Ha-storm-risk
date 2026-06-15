@@ -26,6 +26,7 @@
         "data": {
           "cape_divisor": "CAPE divisor",
           "cin_divisor": "CIN divisor",
+          "cape_gate": "CAPE gate",
           "dew_point_multiplier": "Dew point multiplier",
           "threshold_low": "Low threshold",
           "threshold_medium": "Medium threshold",
@@ -34,6 +35,7 @@
         "data_description": {
           "cape_divisor": "cape_score = clamp(CAPE / divisor, 0, 33). Default 40.",
           "cin_divisor": "cin_score = clamp((150 + CIN) / divisor, 0, 33). Default 4.5.",
+          "cape_gate": "CAPE (J/kg) at which the CIN score reaches full weight; below it CIN is scaled down, so zero CAPE scores zero CIN. Set 0 to disable. Default 100.",
           "dew_point_multiplier": "dp_score = clamp((dew point - 10) * multiplier, 0, 33). Default 3.3.",
           "threshold_low": "At or above this, the level becomes 'present'. Default 25.",
           "threshold_medium": "At or above this, the level becomes 'meaningful'. Default 50.",

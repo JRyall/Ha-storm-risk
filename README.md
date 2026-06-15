@@ -106,14 +106,24 @@ The score sums three ingredients, each capped at 33 points (max 99, displayed
 as 100):
 
 ```text
-cape_score = clamp(cape / 40,           0, 33)
-cin_score  = clamp((150 + cin) / 4.5,   0, 33)   # cin is negative
-dp_score   = clamp((dew_point - 10) * 3.3, 0, 33)
+cape_factor = clamp(cape / 100, 0, 1)            # CIN only counts if CAPE exists
 
-storm_risk = round(cape_score + cin_score + dp_score)
+cape_score  = clamp(cape / 40,             0, 33)
+cin_score   = clamp((150 + cin) / 4.5,     0, 33) * cape_factor
+dp_score    = clamp((dew_point - 10) * 3.3, 0, 33)
+
+storm_risk  = round(cape_score + cin_score + dp_score)
 ```
 
 where `clamp(x, lo, hi) = max(lo, min(hi, x))`.
+
+**Why the CAPE gate?** Convective inhibition (CIN) measures the strength of the
+"lid" holding back rising air — but a weak lid is only relevant if there's
+instability (CAPE) underneath it for the lid to suppress. With zero CAPE there
+is no storm potential no matter how favourable the CIN, so `cin_score` is
+scaled by `cape_factor`, which ramps from 0 (no CAPE) to 1 once CAPE reaches
+the **CAPE gate** (default 100 J/kg). Set the gate to `0` in options to disable
+this and score CIN unconditionally.
 
 | Score | `level` | Interpretation |
 | --- | --- | --- |
@@ -171,6 +181,9 @@ After setup, click **Configure** on the integration to tune the scoring:
 
 - **CAPE divisor** (default `40`) — lower = more sensitive to instability.
 - **CIN divisor** (default `4.5`) — lower = more sensitive to the cap weakening.
+- **CAPE gate** (default `100`) — CAPE (J/kg) at which CIN reaches full weight;
+  below it the CIN score is scaled down so zero CAPE scores zero CIN. `0`
+  disables the gate.
 - **Dew point multiplier** (default `3.3`) — higher = more sensitive to moisture.
 - **Low / Medium / High thresholds** (default `25 / 50 / 75`) — the boundaries
   for the `level` attribute. Must increase from low to high.

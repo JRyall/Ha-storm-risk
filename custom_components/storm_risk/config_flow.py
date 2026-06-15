@@ -23,6 +23,7 @@ from homeassistant.helpers.selector import (
 from . import StormRiskConfigEntry
 from .const import (
     CONF_CAPE_DIVISOR,
+    CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
     CONF_DEW_POINT_MULTIPLIER,
     CONF_LATITUDE,
@@ -33,6 +34,7 @@ from .const import (
     CONF_THRESHOLD_LOW,
     CONF_THRESHOLD_MEDIUM,
     DEFAULT_CAPE_DIVISOR,
+    DEFAULT_CAPE_GATE,
     DEFAULT_CIN_DIVISOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
     DEFAULT_NAME,
@@ -46,6 +48,13 @@ from .const import (
 def _positive_number_selector() -> NumberSelector:
     return NumberSelector(
         NumberSelectorConfig(min=0.1, step=0.1, mode=NumberSelectorMode.BOX)
+    )
+
+
+def _cape_gate_selector() -> NumberSelector:
+    # CAPE (J/kg) below which the CIN contribution is suppressed; 0 disables it.
+    return NumberSelector(
+        NumberSelectorConfig(min=0, step=10, mode=NumberSelectorMode.BOX)
     )
 
 
@@ -143,6 +152,10 @@ class StormRiskOptionsFlow(OptionsFlow):
                     CONF_CIN_DIVISOR,
                     default=options.get(CONF_CIN_DIVISOR, DEFAULT_CIN_DIVISOR),
                 ): _positive_number_selector(),
+                vol.Required(
+                    CONF_CAPE_GATE,
+                    default=options.get(CONF_CAPE_GATE, DEFAULT_CAPE_GATE),
+                ): _cape_gate_selector(),
                 vol.Required(
                     CONF_DEW_POINT_MULTIPLIER,
                     default=options.get(

@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-15
+
+### Fixed
+
+- **CIN no longer scores without CAPE.** Convective inhibition is only
+  meaningful when there is instability for it to suppress, but previously a
+  favourable CIN (e.g. 0 J/kg) awarded its full 33 points even with zero CAPE,
+  producing a misleadingly high storm risk on completely stable days. The CIN
+  contribution is now scaled by `clamp(cape / cape_gate, 0, 1)`.
+
+### Added
+
+- **CAPE gate** option (default 100 J/kg): the CAPE level at which the CIN
+  score reaches full weight. Set to 0 to restore the previous unconditional
+  behaviour.
+
+[1.2.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.2.0
+
 ## [1.1.0] - 2026-06-15
 
 ### Added

@@ -54,6 +54,7 @@ CONF_LONGITUDE: Final = "longitude"
 
 CONF_CAPE_DIVISOR: Final = "cape_divisor"
 CONF_CIN_DIVISOR: Final = "cin_divisor"
+CONF_CAPE_GATE: Final = "cape_gate"
 CONF_DEW_POINT_MULTIPLIER: Final = "dew_point_multiplier"
 CONF_THRESHOLD_LOW: Final = "threshold_low"
 CONF_THRESHOLD_MEDIUM: Final = "threshold_medium"
@@ -70,6 +71,12 @@ DEFAULT_CAPE_DIVISOR: Final = 40.0
 DEFAULT_CIN_DIVISOR: Final = 4.5
 # dp_score = clamp((dp - 10) * DEW_POINT_MULTIPLIER, 0, 33)
 DEFAULT_DEW_POINT_MULTIPLIER: Final = 3.3
+
+# CIN only matters if there is CAPE for it to inhibit. The cin_score is scaled
+# by clamp(cape / CAPE_GATE, 0, 1) so it contributes nothing with zero CAPE and
+# ramps to full weight once CAPE is meaningfully present (~100 J/kg = the
+# bottom of the "weak instability" band).
+DEFAULT_CAPE_GATE: Final = 100.0
 
 # Constant offsets in the CIN / dew-point formulas. Not user-editable in v1.
 CIN_OFFSET: Final = 150.0
