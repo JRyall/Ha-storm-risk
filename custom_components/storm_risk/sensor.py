@@ -15,7 +15,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import StormRiskConfigEntry
@@ -107,7 +107,7 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: StormRiskConfigEntry,
-    async_add_entities: AddConfigEntryEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Storm Risk sensors from a config entry."""
     coordinator = entry.runtime_data

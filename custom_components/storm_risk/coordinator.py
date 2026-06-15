@@ -114,7 +114,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
 
     async def _async_update_data(self) -> StormRiskData:
         """Fetch the latest forecast and derive every sensor value."""
-        params = {
+        params: dict[str, str | int | float] = {
             "latitude": self._latitude,
             "longitude": self._longitude,
             "hourly": ",".join(API_HOURLY_VARIABLES),
