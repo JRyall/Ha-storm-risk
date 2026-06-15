@@ -1,0 +1,12 @@
+{
+  "domain": "storm_risk",
+  "name": "Storm Risk",
+  "codeowners": ["@JRyall"],
+  "config_flow": true,
+  "documentation": "https://github.com/jryall/ha-storm-risk",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/jryall/ha-storm-risk/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
