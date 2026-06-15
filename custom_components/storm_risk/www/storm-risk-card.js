@@ -6,7 +6,7 @@
  * dp_score), the interpretation level, and the 24h forecast all live in that
  * one entity's attributes.
  *
- * Vanilla custom element — no build step, no external dependencies.
+ * Vanilla custom element -- no build step, no external dependencies.
  */
 
 const LEVELS = {
@@ -99,7 +99,7 @@ class StormRiskCard extends HTMLElement {
   }
 
   _gauge(risk, color, unavailable) {
-    // 220° sweep ring gauge. Circumference of the radius-52 circle is ~326.7.
+    // 220-degree sweep ring gauge. Circumference of the radius-52 circle ~327.
     const r = 52;
     const circ = 2 * Math.PI * r;
     const sweep = 220 / 360; // visible portion of the ring
@@ -119,7 +119,7 @@ class StormRiskCard extends HTMLElement {
         </svg>
         <div class="value" style="color:${color}">
           <span class="value-inner"><span class="num">${
-            unavailable ? "–" : risk
+            unavailable ? "-" : risk
           }</span><span class="pct">%</span></span>
         </div>
       </div>`;
@@ -221,16 +221,25 @@ class StormRiskCard extends HTMLElement {
   }
 }
 
-customElements.define("storm-risk-card", StormRiskCard);
+// Guard against being loaded twice (e.g. both auto-registered by the
+// integration and added as a manual dashboard resource) -- defining the same
+// custom element a second time throws and would break the card.
+if (!customElements.get("storm-risk-card")) {
+  customElements.define("storm-risk-card", StormRiskCard);
 
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "storm-risk-card",
-  name: "Storm Risk Card",
-  description:
-    "Convective storm risk gauge with score breakdown and a 24h forecast sparkline.",
-  preview: true,
-  documentationURL: "https://github.com/jryall/ha-storm-risk",
-});
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "storm-risk-card",
+    name: "Storm Risk Card",
+    description:
+      "Convective storm risk gauge with score breakdown and a 24h forecast sparkline.",
+    preview: true,
+    documentationURL: "https://github.com/jryall/ha-storm-risk",
+  });
 
-console.info("%c STORM-RISK-CARD %c loaded ", "background:#fb8c00;color:#fff", "");
+  console.info(
+    "%c STORM-RISK-CARD %c loaded ",
+    "background:#fb8c00;color:#fff",
+    ""
+  );
+}

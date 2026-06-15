@@ -210,8 +210,24 @@ entity: sensor.storm_risk_storm_risk
 # show_forecast: true
 ```
 
-> If the card doesn't appear right after install, do a hard refresh of the
-> browser (Ctrl/Cmd-Shift-R) so the frontend picks up the new resource.
+> **Card not showing / "Custom element doesn't exist: storm-risk-card"?**
+> The card is auto-registered when the integration sets up, but two things can
+> get in the way:
+>
+> 1. **A full restart is required after install/update.** Downloading via HACS
+>    only copies files — the code that registers the card runs on a full
+>    **Settings → System → Restart**, not a quick reload. (HACS *branch*
+>    installs also only update when you explicitly redownload.)
+> 2. **Frontend cache.** After restarting, hard-refresh the browser
+>    (Ctrl/Cmd-Shift-R) or, in the companion app, **Settings → Companion App →
+>    Debugging → Reset frontend cache**, then reopen the app.
+>
+> **Manual fallback.** If it still won't load, add it as a dashboard resource
+> directly (the file is served at `/storm_risk/storm-risk-card.js`):
+> turn on **Advanced Mode** (your profile), then **Settings → Dashboards → ⋮ →
+> Resources → Add resource**, URL `/storm_risk/storm-risk-card.js`, type
+> **JavaScript Module**. The card guards against double-registration, so this
+> is safe even alongside the automatic registration.
 
 ## Example dashboard card
 
