@@ -248,7 +248,7 @@ if (!customElements.get("storm-risk-card")) {
     description:
       "Convective storm risk gauge with score breakdown and a 24h forecast sparkline.",
     preview: true,
-    documentationURL: "https://github.com/jryall/ha-storm-risk",
+    documentationURL: "https://github.com/JRyall/Ha-storm-risk",
   });
 
   console.info(

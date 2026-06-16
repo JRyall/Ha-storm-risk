@@ -13,7 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI: bump `actions/checkout` to v5 (Node 24) and skip the HACS `brands` check,
   which only applies to the default store, not custom-repository installs.
 
-[1.4.2]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.2
+[1.4.2]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.4.2
 
 ## [1.4.1] - 2026-06-16
 
@@ -24,7 +24,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Storm Risk card shows those real values (J/kg, J/kg, °C) as sub-text beneath
   each score bar, so you get the at-a-glance score plus the underlying data.
 
-[1.4.1]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.1
+[1.4.1]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.4.1
 
 ## [1.4.0] - 2026-06-16
 
@@ -47,7 +47,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Map-card + zone example, framed as the observation counterpart to the
   forecast.
 
-[1.4.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.0
+[1.4.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.4.0
 
 ## [1.3.2] - 2026-06-15
 
@@ -63,7 +63,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a card troubleshooting section (full restart, frontend cache, and a
   manual dashboard-resource fallback) to the README.
 
-[1.3.2]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.3.2
+[1.3.2]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.3.2
 
 ## [1.3.1] - 2026-06-15
 
@@ -72,7 +72,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Storm Risk card: the `%` sign in the gauge now sits next to the number as a
   superscript instead of floating to the top of the gauge.
 
-[1.3.1]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.3.1
+[1.3.1]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.3.1
 
 ## [1.3.0] - 2026-06-15
 
@@ -85,7 +85,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   install and no manual dashboard resource to add. It also appears in the card
   picker.
 
-[1.3.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.3.0
+[1.3.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.3.0
 
 ## [1.2.0] - 2026-06-15
 
@@ -103,7 +103,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   score reaches full weight. Set to 0 to restore the previous unconditional
   behaviour.
 
-[1.2.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.2.0
+[1.2.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.2.0
 
 ## [1.1.0] - 2026-06-15
 
@@ -129,7 +129,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - *AS3935 lightning-detector support* — that is local sensor hardware and
   belongs in a separate integration, not this cloud-polling one.
 
-[1.1.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.1.0
+[1.1.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.1.0
 
 ## [1.0.0] - 2026-06-15
 
@@ -153,4 +153,4 @@ Initial release.
 - README covering installation, configuration, sensor meanings with a
   climatological scale, example dashboard/automation YAML, and limitations.
 
-[1.0.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.0.0
+[1.0.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.0.0

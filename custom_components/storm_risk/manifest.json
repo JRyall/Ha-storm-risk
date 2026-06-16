@@ -4,10 +4,10 @@
   "codeowners": ["@JRyall"],
   "config_flow": true,
   "dependencies": ["http", "frontend"],
-  "documentation": "https://github.com/jryall/ha-storm-risk",
+  "documentation": "https://github.com/JRyall/Ha-storm-risk",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/jryall/ha-storm-risk/issues",
+  "issue_tracker": "https://github.com/JRyall/Ha-storm-risk/issues",
   "requirements": [],
   "version": "1.4.2"
 }

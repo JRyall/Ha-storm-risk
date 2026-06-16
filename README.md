@@ -1,7 +1,7 @@
 # Storm Risk — Home Assistant integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![Validate](https://github.com/jryall/ha-storm-risk/actions/workflows/validate.yaml/badge.svg)](https://github.com/jryall/ha-storm-risk/actions/workflows/validate.yaml)
+[![Validate](https://github.com/JRyall/Ha-storm-risk/actions/workflows/validate.yaml/badge.svg)](https://github.com/JRyall/Ha-storm-risk/actions/workflows/validate.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A Home Assistant custom integration that surfaces **convective storm forecasting
@@ -146,7 +146,7 @@ the default HACS store).
 
 1. In Home Assistant, open **HACS → Integrations**.
 2. Click the **⋮** menu (top right) → **Custom repositories**.
-3. Add the repository URL `https://github.com/jryall/ha-storm-risk` with the
+3. Add the repository URL `https://github.com/JRyall/Ha-storm-risk` with the
    category **Integration**, then click **Add**.
 4. Find **Storm Risk** in the list, open it, and click **Download**.
 5. **Restart Home Assistant.**
