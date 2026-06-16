@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-06-16
+
+### Fixed
+
+- Define `CONFIG_SCHEMA` (config-entry-only) so hassfest passes now that the
+  integration implements `async_setup` for the bundled card.
+- CI: bump `actions/checkout` to v5 (Node 24) and skip the HACS `brands` check,
+  which only applies to the default store, not custom-repository installs.
+
+[1.4.2]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.2
+
 ## [1.4.1] - 2026-06-16
 
 ### Added
@@ -12,13 +23,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `dew_point` values as attributes.
 - Storm Risk card shows those real values (J/kg, J/kg, °C) as sub-text beneath
   each score bar, so you get the at-a-glance score plus the underlying data.
-
-### Fixed
-
-- Define `CONFIG_SCHEMA` (config-entry-only) so hassfest passes now that the
-  integration implements `async_setup` for the bundled card.
-- CI: bump `actions/checkout` to v5 (Node 24) and skip the HACS `brands` check,
-  which only applies to the default store, not custom-repository installs.
 
 [1.4.1]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.1
 
