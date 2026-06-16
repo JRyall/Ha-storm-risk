@@ -17,9 +17,9 @@ const LEVELS = {
 };
 
 const INGREDIENTS = [
-  { key: "cape_score", label: "CAPE", title: "Instability / fuel" },
-  { key: "cin_score", label: "CIN", title: "Lid (gated by CAPE)" },
-  { key: "dp_score", label: "Dew pt", title: "Low-level moisture" },
+  { key: "cape_score", raw: "cape", unit: "J/kg", digits: 0, label: "CAPE", title: "Instability / fuel" },
+  { key: "cin_score", raw: "cin", unit: "J/kg", digits: 0, label: "CIN", title: "Lid (gated by CAPE)" },
+  { key: "dp_score", raw: "dew_point", unit: "&deg;C", digits: 1, label: "Dew pt", title: "Low-level moisture" },
 ];
 
 // Each ingredient contributes up to 33 points.
@@ -129,11 +129,19 @@ class StormRiskCard extends HTMLElement {
     const rows = INGREDIENTS.map((ing) => {
       const score = Number(attrs[ing.key] ?? 0);
       const pct = Math.max(0, Math.min(100, (score / SCORE_CAP) * 100));
+      const raw = attrs[ing.raw];
+      const sub =
+        raw === undefined || raw === null
+          ? ""
+          : `${Number(raw).toFixed(ing.digits)} ${ing.unit}`;
       return `
-        <div class="bar-row" title="${ing.title}">
-          <span class="bar-label">${ing.label}</span>
-          <span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span>
-          <span class="bar-val">${score.toFixed(0)}<span class="bar-cap">/${SCORE_CAP}</span></span>
+        <div class="bar-group" title="${ing.title}">
+          <div class="bar-row">
+            <span class="bar-label">${ing.label}</span>
+            <span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span>
+            <span class="bar-val">${score.toFixed(0)}<span class="bar-cap">/${SCORE_CAP}</span></span>
+          </div>
+          <div class="bar-sub">${sub}</div>
         </div>`;
     }).join("");
     return `<div class="breakdown">${rows}</div>`;
@@ -192,8 +200,13 @@ class StormRiskCard extends HTMLElement {
         .value-inner { line-height: 1; white-space: nowrap; }
         .value .num { font-size: 2.2rem; font-weight: 600; }
         .value .pct { font-size: 1rem; font-weight: 600; vertical-align: super; margin-left: 1px; }
-        .breakdown { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+        .breakdown { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+        .bar-group { display: flex; flex-direction: column; }
         .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        .bar-sub {
+          margin-left: 56px; margin-top: 2px;
+          font-size: 0.72rem; color: var(--secondary-text-color);
+        }
         .bar-label { width: 48px; color: var(--secondary-text-color); }
         .bar-track {
           flex: 1; height: 8px; border-radius: 4px;

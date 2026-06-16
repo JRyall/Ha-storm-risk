@@ -109,6 +109,11 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cin_score": data.cin_score,
             "dp_score": data.dp_score,
             "level": data.level,
+            # Raw current-hour values, so the card can show the real data
+            # alongside the score breakdown.
+            "cape": data.cape_now,
+            "cin": data.cin_now,
+            "dew_point": data.dew_point,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },
