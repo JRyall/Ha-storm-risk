@@ -316,9 +316,27 @@ series:
 
 ---
 
+## Storm alert (blueprint)
+
+The easiest way to get a phone notification when storms look likely is the
+bundled **Storm Risk alert** blueprint. Import it, then fill in a short form —
+pick the Storm Risk sensor, a threshold (e.g. 65%), how long it must stay there
+(e.g. 30 minutes), and which mobile device to notify:
+
+[![Open your Home Assistant instance and show the blueprint import dialog with this blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FJRyall%2FHa-storm-risk%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fstorm_risk%2Fstorm_risk_alert.yaml)
+
+Or manually: **Settings → Automations & scenes → Blueprints → Import blueprint**
+and paste the blueprint URL, then **Settings → Automations & scenes → Create
+automation → Use blueprint → Storm Risk alert**.
+
+The blueprint uses Home Assistant's native "sustained for" trigger, so "over
+65% for more than half an hour" is handled correctly (and it survives
+restarts). You can create several automations from it for different
+thresholds or locations.
+
 ## Example automation
 
-Notify when the setup gets meaningfully loaded:
+Prefer to write it yourself? Notify when the setup gets meaningfully loaded:
 
 ```yaml
 alias: Storm risk alert

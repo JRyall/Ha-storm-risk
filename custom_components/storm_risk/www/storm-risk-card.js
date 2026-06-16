@@ -133,7 +133,7 @@ class StormRiskCard extends HTMLElement {
         <div class="bar-row" title="${ing.title}">
           <span class="bar-label">${ing.label}</span>
           <span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span>
-          <span class="bar-val">${score.toFixed(0)}</span>
+          <span class="bar-val">${score.toFixed(0)}<span class="bar-cap">/${SCORE_CAP}</span></span>
         </div>`;
     }).join("");
     return `<div class="breakdown">${rows}</div>`;
@@ -203,7 +203,8 @@ class StormRiskCard extends HTMLElement {
           display: block; height: 100%; border-radius: 4px;
           background: var(--primary-color); transition: width 0.6s ease;
         }
-        .bar-val { width: 24px; text-align: right; color: var(--primary-text-color); }
+        .bar-val { width: 46px; text-align: right; color: var(--primary-text-color); }
+        .bar-cap { color: var(--secondary-text-color); font-size: 0.75rem; }
         .forecast { margin-top: 14px; }
         .forecast-title { font-size: 0.8rem; color: var(--secondary-text-color); margin-bottom: 2px; }
         .forecast svg { width: 100%; height: 56px; display: block; }

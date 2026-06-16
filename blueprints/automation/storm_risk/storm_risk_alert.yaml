@@ -1,0 +1,77 @@
+blueprint:
+  name: Storm Risk alert
+  description: >
+    Send a Home Assistant Companion (mobile app) notification when the Storm
+    Risk score stays at or above a threshold for a sustained period -- for
+    example, over 65% for more than 30 minutes.
+
+    Part of the Storm Risk integration:
+    https://github.com/JRyall/Ha-storm-risk
+  domain: automation
+  source_url: https://github.com/JRyall/Ha-storm-risk/blob/main/blueprints/automation/storm_risk/storm_risk_alert.yaml
+  input:
+    storm_risk_sensor:
+      name: Storm Risk sensor
+      description: The Storm Risk (%) sensor to watch.
+      selector:
+        entity:
+          filter:
+            - integration: storm_risk
+              domain: sensor
+    threshold:
+      name: Threshold (%)
+      description: Notify when the storm risk is at or above this value.
+      default: 65
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+    duration:
+      name: Sustained for
+      description: >
+        The risk must stay at or above the threshold for this long before a
+        notification is sent.
+      default:
+        minutes: 30
+      selector:
+        duration: {}
+    notify_device:
+      name: Mobile device
+      description: The phone or tablet (running the HA Companion app) to notify.
+      selector:
+        device:
+          integration: mobile_app
+    title:
+      name: Notification title
+      default: "⛈️ Storm potential rising"
+      selector:
+        text: {}
+    message:
+      name: Notification message
+      description: Supports templates. {{ trigger.to_state.state }} is the current risk %.
+      default: >-
+        Storm risk has held at or above the threshold and is now
+        {{ trigger.to_state.state }}%.
+      selector:
+        text:
+          multiline: true
+
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input storm_risk_sensor
+    above: !input threshold
+    for: !input duration
+
+action:
+  - alias: Notify the chosen mobile device
+    domain: mobile_app
+    type: notify
+    device_id: !input notify_device
+    title: !input title
+    message: !input message
