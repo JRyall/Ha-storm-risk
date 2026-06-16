@@ -15,6 +15,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
@@ -23,6 +24,11 @@ from .coordinator import StormRiskCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
+
+# This integration is configured only via config entries (UI); there are no
+# YAML options under the `storm_risk:` key. Required because we define
+# async_setup (to register the bundled card).
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 type StormRiskConfigEntry = ConfigEntry[StormRiskCoordinator]
 
