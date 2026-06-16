@@ -18,6 +18,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Storm Risk card: the score-breakdown bars now show each ingredient's
   contribution as `N/33` so the scale is clear.
 
+### Docs
+
+- README: added a "Companion: live lightning strikes" section recommending the
+  Blitzortung integration for ad-free real-time strikes on an HA map, with a
+  Map-card + zone example, framed as the observation counterpart to the
+  forecast.
+
 [1.4.0]: https://github.com/jryall/ha-storm-risk/releases/tag/v1.4.0
 
 ## [1.3.2] - 2026-06-15

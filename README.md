@@ -365,6 +365,49 @@ mode: single
 
 ---
 
+## Companion: live lightning strikes
+
+Storm Risk is a **forecast** — "will it fire later?". Its natural companion is a
+real-time **observation** — "is it firing now, and where?". For that, the data
+behind [lightningmaps.org](https://www.lightningmaps.org/) is
+[Blitzortung.org](https://www.blitzortung.org/), a free community lightning
+network, and there's a mature integration for it:
+[**`mrk-its/homeassistant-blitzortung`**](https://github.com/mrk-its/homeassistant-blitzortung)
+(available in the default HACS store).
+
+It puts live strikes on a map in Home Assistant — ad-free — and pairs neatly
+with this integration on one dashboard.
+
+1. **HACS → Blitzortung → Download**, restart, then **Settings → Devices &
+   services → Add integration → Blitzortung**. Set your **radius** — note it's
+   in **km**, so a 100-mile circle is **~161 km**.
+2. In the integration's **options, enable "create geo_location entities"**
+   (off by default — this is what draws the strike markers).
+3. Add a **Map card**. To show the radius as a circle, create a zone
+   (**Settings → Areas & Zones**, radius `160934` m) and include it:
+
+```yaml
+type: map
+title: Live lightning
+default_zoom: 8
+hours_to_show: 1
+geo_location_sources:
+  - blitzortung
+entities:
+  - zone.lightning_watch   # your 100-mile zone, draws the circle
+```
+
+For a nicer-looking display there's also a dedicated
+[lovelace-blitzortung-lightning-card](https://github.com/timmaurice/lovelace-blitzortung-lightning-card).
+
+> **Note on Blitzortung:** the data is for **private/entertainment use only and
+> must not be used to protect people or equipment** — the same safety caveat
+> that applies to Storm Risk. Blitzortung also requires third-party apps to
+> relay via their own server (which that integration does), so this integration
+> deliberately does not fetch lightning data itself.
+
+---
+
 ## Limitations
 
 Please read these before reading too much into the numbers.
@@ -383,7 +426,9 @@ Please read these before reading too much into the numbers.
 
 ### Verify against the real world
 
-- ⚡ Live lightning: [lightningmaps.org](https://www.lightningmaps.org/)
+- ⚡ Live lightning: [lightningmaps.org](https://www.lightningmaps.org/), or
+  bring it into HA ad-free — see [Companion: live lightning
+  strikes](#companion-live-lightning-strikes)
 - 🇬🇧 Official UK warnings:
   [Met Office weather warnings](https://www.metoffice.gov.uk/weather/warnings-and-advice/uk-warnings)
 
