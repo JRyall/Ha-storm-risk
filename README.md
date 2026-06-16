@@ -319,20 +319,30 @@ series:
 ## Storm alert (blueprint)
 
 The easiest way to get a phone notification when storms look likely is the
-bundled **Storm Risk alert** blueprint. Import it, then fill in a short form —
-pick the Storm Risk sensor, a threshold (e.g. 65%), how long it must stay there
-(e.g. 30 minutes), and which mobile device to notify:
+**Storm Risk alert** blueprint — pick the Storm Risk sensor, a threshold (e.g.
+65%), how long it must stay there (e.g. 30 minutes), and which mobile device to
+notify.
+
+> **Note:** HACS only installs the integration (`custom_components/`), **not**
+> this blueprint — you import the blueprint separately (one tap below). You
+> only do this once.
+
+**1. Import the blueprint** — tap this (it opens the import dialog pre-filled,
+then hit *Import blueprint*):
 
 [![Open your Home Assistant instance and show the blueprint import dialog with this blueprint pre-filled.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FJRyall%2FHa-storm-risk%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fstorm_risk%2Fstorm_risk_alert.yaml)
 
 Or manually: **Settings → Automations & scenes → Blueprints → Import blueprint**
-and paste the blueprint URL, then **Settings → Automations & scenes → Create
-automation → Use blueprint → Storm Risk alert**.
+and paste:
+`https://github.com/JRyall/Ha-storm-risk/blob/main/blueprints/automation/storm_risk/storm_risk_alert.yaml`
+
+**2. Create the automation** — **Settings → Automations & scenes → Create
+automation → Use blueprint → Storm Risk alert**, fill in the form, and save.
 
 The blueprint uses Home Assistant's native "sustained for" trigger, so "over
 65% for more than half an hour" is handled correctly (and it survives
-restarts). You can create several automations from it for different
-thresholds or locations.
+restarts). You can create several automations from it for different thresholds
+or locations (e.g. a heads-up at 50% and an urgent one at 85%).
 
 ## Example automation
 
