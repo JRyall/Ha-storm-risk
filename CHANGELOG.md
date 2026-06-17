@@ -4,6 +4,46 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-06-17
+
+Makes the "Severe" band mean something, adds a trigger cross-check, surfaces a
+multi-day composite outlook, and rounds out the Home Assistant integration.
+
+### Added
+
+- **Wind shear → band cap.** A deep-layer (10 m → 500 hPa) bulk-shear proxy now
+  gates how high the band can go: too little shear caps a loaded airmass at
+  *Watch* (pulse storms), more shear unlocks *Loaded*, then *Severe*. The score
+  itself is unchanged — shear only affects the band — so "Severe" now requires
+  the kinematics that actually organise storms. New **Wind shear** sensor (m/s)
+  with a `mode` of pulse / organised / supercell.
+- **Trigger likelihood sensor** (precipitation probability) — a "will anything
+  actually fire" cross-check, shown on the card but deliberately kept out of
+  the score.
+- **Storm risk outlook (7 day)** sensor — the highest composite score over the
+  next week, with a per-day breakdown.
+- **Storm risk active** `binary_sensor`, on once the score crosses a new
+  **active threshold** option (default 45).
+- **`storm_risk_band_changed` event** on the HA bus for transition-based
+  automations.
+- **Reconfigure flow** — move or rename a location without deleting the entry
+  (and its history).
+- **Config-entry diagnostics** — redacted dump of config, computed result and
+  the last raw API response.
+- New options: **Shear for Loaded / Severe** (default 10 / 18 m/s) and
+  **Active threshold**. The card gained a context line (organisation · shear ·
+  trigger), and `peak_score` / `peak_time` are exposed for notifications.
+
+### Changed (breaking)
+
+- The `level` / band of a location can now be **capped by wind shear**, so a
+  high score may report a lower band than before (e.g. 90 with weak shear is
+  *Watch*, not *Severe*). Automations keying off the band may see different
+  values. Shear and trigger rely on optional Open-Meteo variables and degrade
+  gracefully (cap skipped, sensors *unknown*) if a model omits them.
+
+[3.0.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v3.0.0
+
 ## [2.1.0] - 2026-06-17
 
 ### Added

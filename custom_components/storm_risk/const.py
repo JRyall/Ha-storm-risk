@@ -19,6 +19,12 @@ API_URL: Final = "https://api.open-meteo.com/v1/forecast"
 # returns ``"undefined"`` units and ``null`` values for it, which is useless
 # and noisy. CAPE and convective_inhibition behave well, so we stick to the
 # parameters below.
+#
+# The pressure-level winds (10 m + 500 hPa) let us derive a deep-layer bulk
+# shear proxy, and ``precipitation_probability`` is the "will anything actually
+# fire" trigger signal. Both are handled defensively: if a model returns null
+# for them the dependent features simply degrade (no band cap / unknown
+# trigger) rather than breaking the score.
 API_HOURLY_VARIABLES: Final = (
     "cape",
     "convective_inhibition",
@@ -26,7 +32,14 @@ API_HOURLY_VARIABLES: Final = (
     "dew_point_2m",
     "wind_speed_10m",
     "wind_direction_10m",
+    "wind_speed_500hPa",
+    "wind_direction_500hPa",
+    "precipitation_probability",
 )
+
+# Wind speeds are requested in m/s so the derived bulk shear is in m/s, the
+# unit the shear thresholds below are expressed in.
+API_WIND_SPEED_UNIT: Final = "ms"
 
 # Seven days of hourly data powers the 7-day outlook while still giving us
 # "now" plus a 24h look-ahead even late in the day.
@@ -61,6 +74,15 @@ CONF_THRESHOLD_QUIET: Final = "threshold_quiet"
 CONF_THRESHOLD_WATCH: Final = "threshold_watch"
 CONF_THRESHOLD_LOADED: Final = "threshold_loaded"
 CONF_THRESHOLD_SEVERE: Final = "threshold_severe"
+
+# Deep-layer bulk shear (m/s) required to *unlock* the upper bands. Shear is
+# what organises convection: with too little of it even a thermodynamically
+# loaded airmass only manages disorganised pulse storms, so the band is capped.
+CONF_SHEAR_LOADED_MIN: Final = "shear_loaded_min"
+CONF_SHEAR_SEVERE_MIN: Final = "shear_severe_min"
+
+# Score at or above which the "Storm risk active" binary sensor turns on.
+CONF_ACTIVE_THRESHOLD: Final = "active_threshold"
 
 # --- Storm Risk scoring defaults ---------------------------------------------
 #
@@ -111,9 +133,43 @@ DEFAULT_THRESHOLD_WATCH: Final = 45
 DEFAULT_THRESHOLD_LOADED: Final = 65
 DEFAULT_THRESHOLD_SEVERE: Final = 85
 
-# Human-readable risk bands keyed off the thresholds above.
+# Human-readable risk bands keyed off the thresholds above, in ascending order
+# of severity (used as a rank when capping the band by shear).
 LEVEL_NONE: Final = "none"
 LEVEL_QUIET: Final = "quiet"
 LEVEL_WATCH: Final = "watch"
 LEVEL_LOADED: Final = "loaded"
 LEVEL_SEVERE: Final = "severe"
+LEVELS_ORDERED: Final = (
+    LEVEL_NONE,
+    LEVEL_QUIET,
+    LEVEL_WATCH,
+    LEVEL_LOADED,
+    LEVEL_SEVERE,
+)
+
+# --- Shear / storm-organisation thresholds (configurable) --------------------
+#
+# Bulk shear (m/s) gates how organised storms can get, and therefore the
+# highest band the score is allowed to reach:
+#   shear < loaded_min          -> capped at "watch"  (pulse / single cell)
+#   loaded_min <= shear < severe_min -> capped at "loaded" (multicell, organised)
+#   shear >= severe_min         -> uncapped            (supercell potential)
+# 10 m/s ~= 20 kt, 18 m/s ~= 35 kt -- the usual marginal / supercell guides.
+DEFAULT_SHEAR_LOADED_MIN: Final = 10.0
+DEFAULT_SHEAR_SEVERE_MIN: Final = 18.0
+
+# Storm-organisation descriptor derived from the same thresholds.
+MODE_UNKNOWN: Final = "unknown"
+MODE_PULSE: Final = "pulse"
+MODE_ORGANISED: Final = "organised"
+MODE_SUPERCELL: Final = "supercell"
+
+# Default score at/above which the "Storm risk active" binary sensor is on.
+# Mirrors the "watch" band so the binary sensor lights up once it's worth
+# watching.
+DEFAULT_ACTIVE_THRESHOLD: Final = 45
+
+# Event fired on the HA bus whenever a location's band changes (e.g. for
+# "notify me when it crosses into Watch" automations without polling).
+EVENT_BAND_CHANGED: Final = f"{DOMAIN}_band_changed"

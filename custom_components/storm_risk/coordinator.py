@@ -11,6 +11,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import logging
+from math import cos, radians, sin, sqrt
 from typing import Any
 
 from aiohttp import ClientError
@@ -24,12 +25,15 @@ from .const import (
     API_FORECAST_DAYS,
     API_HOURLY_VARIABLES,
     API_URL,
+    API_WIND_SPEED_UNIT,
     CIN_OFFSET,
     CONF_CAPE_DIVISOR,
     CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
     CONF_DEW_POINT_FLOOR,
     CONF_DEW_POINT_MULTIPLIER,
+    CONF_SHEAR_LOADED_MIN,
+    CONF_SHEAR_SEVERE_MIN,
     CONF_THRESHOLD_LOADED,
     CONF_THRESHOLD_QUIET,
     CONF_THRESHOLD_SEVERE,
@@ -39,19 +43,27 @@ from .const import (
     DEFAULT_CIN_DIVISOR,
     DEFAULT_DEW_POINT_FLOOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
+    DEFAULT_SHEAR_LOADED_MIN,
+    DEFAULT_SHEAR_SEVERE_MIN,
     DEFAULT_THRESHOLD_LOADED,
     DEFAULT_THRESHOLD_QUIET,
     DEFAULT_THRESHOLD_SEVERE,
     DEFAULT_THRESHOLD_WATCH,
     DEW_POINT_OFFSET,
     DOMAIN,
+    EVENT_BAND_CHANGED,
     FORECAST_HOURS,
     LEVEL_LOADED,
     LEVEL_NONE,
     LEVEL_QUIET,
     LEVEL_SEVERE,
     LEVEL_WATCH,
+    LEVELS_ORDERED,
     LOOK_AHEAD_HOURS,
+    MODE_ORGANISED,
+    MODE_PULSE,
+    MODE_SUPERCELL,
+    MODE_UNKNOWN,
     OUTLOOK_DAYS,
     SCORE_CAP,
     UPDATE_INTERVAL,
@@ -94,6 +106,15 @@ class StormRiskData:
     forecast: list[dict[str, Any]]
     cape_outlook_max: float
     daily_outlook: list[dict[str, Any]]
+    # v3: shear-based organisation, trigger likelihood and the 24h peak.
+    # ``shear`` / ``trigger`` are None when the model doesn't provide the
+    # underlying data, so dependent features degrade rather than break.
+    shear: float | None
+    mode: str
+    trigger: int | None
+    storm_risk_outlook_max: int
+    peak_score: int
+    peak_time: str
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -113,6 +134,8 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         self._session = async_get_clientsession(hass)
         self._latitude: float = config_entry.data["latitude"]
         self._longitude: float = config_entry.data["longitude"]
+        # Kept for config-entry diagnostics (the last raw API response).
+        self.last_payload: dict[str, Any] | None = None
 
     # --- Options helpers -----------------------------------------------------
     #
@@ -132,6 +155,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             "longitude": self._longitude,
             "hourly": ",".join(API_HOURLY_VARIABLES),
             "forecast_days": API_FORECAST_DAYS,
+            "wind_speed_unit": API_WIND_SPEED_UNIT,
             # Let Open-Meteo resolve the timezone from the coordinates so the
             # hourly series is anchored to the location's local midnight.
             "timezone": "auto",
@@ -145,6 +169,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         except (ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with Open-Meteo: {err}") from err
 
+        self.last_payload = payload
         try:
             return self._process(payload)
         except (KeyError, TypeError, ValueError, IndexError) as err:
@@ -162,6 +187,14 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         dew: list[float | None] = hourly["dew_point_2m"]
         wind_speed: list[float | None] = hourly["wind_speed_10m"]
         wind_dir: list[float | None] = hourly["wind_direction_10m"]
+        # Optional extras -- a model may not return these. ``.get`` keeps the
+        # whole refresh working (shear cap / trigger just degrade) instead of
+        # raising on a missing key.
+        ws_500: list[float | None] = hourly.get("wind_speed_500hPa") or []
+        wd_500: list[float | None] = hourly.get("wind_direction_500hPa") or []
+        precip_prob: list[float | None] = (
+            hourly.get("precipitation_probability") or []
+        )
 
         utc_offset_seconds = int(payload.get("utc_offset_seconds", 0))
         index = self._current_index(times, utc_offset_seconds)
@@ -169,6 +202,18 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cape_now = _value(cape, index)
         cin_now = _value(cin, index)
         dew_now = _value(dew, index)
+
+        # Deep-layer bulk shear (10 m -> 500 hPa) and the trigger likelihood.
+        # Both are optional, so missing data yields None rather than an error.
+        shear_now = _bulk_shear(
+            _opt(wind_speed, index),
+            _opt(wind_dir, index),
+            _opt(ws_500, index),
+            _opt(wd_500, index),
+        )
+        trigger_raw = _opt(precip_prob, index)
+        trigger_now = None if trigger_raw is None else int(round(trigger_raw))
+        mode = self._mode(shear_now)
 
         # Look-ahead window for the "today" sensors: find the peak CAPE and the
         # local time at which it occurs over the next LOOK_AHEAD_HOURS hours.
@@ -190,7 +235,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             cape_max_today = cape_now
             cape_peak_hour = times[index][11:16]
 
-        scores = self._score(cape_now, cin_now, dew_now)
+        scores = self._score(cape_now, cin_now, dew_now, shear_now)
         forecast = self._build_forecast(times, cape, cin, dew, index)
         daily_outlook = self._build_outlook(times, cape, cin, dew)
         cape_outlook_max = (
@@ -198,6 +243,21 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             if daily_outlook
             else round(cape_now, 1)
         )
+        storm_risk_outlook_max = (
+            max(day["storm_risk_max"] for day in daily_outlook)
+            if daily_outlook
+            else scores["storm_risk"]
+        )
+
+        # Peak of the next-24h score series, for at-a-glance "worst, and when".
+        peak_score = scores["storm_risk"]
+        peak_time = times[index][11:16]
+        for entry in forecast:
+            if entry["storm_risk"] > peak_score:
+                peak_score = entry["storm_risk"]
+                peak_time = entry["datetime"][11:16]
+
+        self._fire_band_change(scores["level"], scores["storm_risk"])
 
         return StormRiskData(
             cape_now=round(cape_now, 1),
@@ -211,7 +271,33 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             forecast=forecast,
             cape_outlook_max=cape_outlook_max,
             daily_outlook=daily_outlook,
+            shear=None if shear_now is None else round(shear_now, 1),
+            mode=mode,
+            trigger=trigger_now,
+            storm_risk_outlook_max=storm_risk_outlook_max,
+            peak_score=peak_score,
+            peak_time=peak_time,
             **scores,
+        )
+
+    def _fire_band_change(self, new_level: str, storm_risk: int) -> None:
+        """Fire an event on the HA bus when the band changes between refreshes.
+
+        Lets automations react to a transition (e.g. "none -> watch") without
+        polling. No event is fired on the very first refresh.
+        """
+        previous = self.data.level if self.data else None
+        if previous is None or previous == new_level:
+            return
+        self.hass.bus.async_fire(
+            EVENT_BAND_CHANGED,
+            {
+                "entry_id": self.config_entry.entry_id,
+                "name": self.config_entry.data.get("name"),
+                "from_level": previous,
+                "to_level": new_level,
+                "storm_risk": storm_risk,
+            },
         )
 
     def _build_forecast(
@@ -341,7 +427,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         return cape_score, cin_score, dp_score
 
     def _score(
-        self, cape: float, cin: float, dew_point: float
+        self, cape: float, cin: float, dew_point: float, shear: float | None = None
     ) -> dict[str, Any]:
         """Compute the composite storm-risk score and its components."""
         cape_score, cin_score, dp_score = self._score_components(cape, cin, dew_point)
@@ -352,25 +438,60 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             "cape_score": round(cape_score, 1),
             "cin_score": round(cin_score, 1),
             "dp_score": round(dp_score, 1),
-            "level": self._level(storm_risk),
+            "level": self._level(storm_risk, shear),
         }
 
-    def _level(self, storm_risk: int) -> str:
-        """Map a numeric score to a human-readable interpretation band."""
+    def _level(self, storm_risk: int, shear: float | None = None) -> str:
+        """Map a score to a band, then cap that band by available shear.
+
+        The score (thermodynamics) is never changed; shear only limits how
+        organised storms can get, so it caps the *band*: a loaded airmass with
+        little shear is still only "watch" (pulse storms). With no shear data
+        the cap is skipped so models without it behave as before.
+        """
         quiet = int(self._option(CONF_THRESHOLD_QUIET, DEFAULT_THRESHOLD_QUIET))
         watch = int(self._option(CONF_THRESHOLD_WATCH, DEFAULT_THRESHOLD_WATCH))
         loaded = int(self._option(CONF_THRESHOLD_LOADED, DEFAULT_THRESHOLD_LOADED))
         severe = int(self._option(CONF_THRESHOLD_SEVERE, DEFAULT_THRESHOLD_SEVERE))
 
         if storm_risk >= severe:
-            return LEVEL_SEVERE
-        if storm_risk >= loaded:
-            return LEVEL_LOADED
-        if storm_risk >= watch:
-            return LEVEL_WATCH
-        if storm_risk >= quiet:
-            return LEVEL_QUIET
-        return LEVEL_NONE
+            base = LEVEL_SEVERE
+        elif storm_risk >= loaded:
+            base = LEVEL_LOADED
+        elif storm_risk >= watch:
+            base = LEVEL_WATCH
+        elif storm_risk >= quiet:
+            base = LEVEL_QUIET
+        else:
+            base = LEVEL_NONE
+
+        if shear is None:
+            return base
+
+        loaded_min = float(self._option(CONF_SHEAR_LOADED_MIN, DEFAULT_SHEAR_LOADED_MIN))
+        severe_min = float(self._option(CONF_SHEAR_SEVERE_MIN, DEFAULT_SHEAR_SEVERE_MIN))
+        if shear >= severe_min:
+            cap = LEVEL_SEVERE
+        elif shear >= loaded_min:
+            cap = LEVEL_LOADED
+        else:
+            cap = LEVEL_WATCH
+
+        if LEVELS_ORDERED.index(base) > LEVELS_ORDERED.index(cap):
+            return cap
+        return base
+
+    def _mode(self, shear: float | None) -> str:
+        """Classify storm organisation from bulk shear (same thresholds)."""
+        if shear is None:
+            return MODE_UNKNOWN
+        loaded_min = float(self._option(CONF_SHEAR_LOADED_MIN, DEFAULT_SHEAR_LOADED_MIN))
+        severe_min = float(self._option(CONF_SHEAR_SEVERE_MIN, DEFAULT_SHEAR_SEVERE_MIN))
+        if shear >= severe_min:
+            return MODE_SUPERCELL
+        if shear >= loaded_min:
+            return MODE_ORGANISED
+        return MODE_PULSE
 
 
 def _value(series: list[float | None], index: int) -> float:
@@ -384,3 +505,36 @@ def _value(series: list[float | None], index: int) -> float:
     if value is None:
         raise ValueError(f"missing value at index {index}")
     return float(value)
+
+
+def _opt(series: list[float | None], index: int) -> float | None:
+    """Return ``series[index]`` as a float, or None if absent/missing.
+
+    Used for the optional variables (shear winds, precip probability) so a
+    short or null series degrades the dependent feature instead of raising.
+    """
+    if not series or index >= len(series):
+        return None
+    value = series[index]
+    return None if value is None else float(value)
+
+
+def _bulk_shear(
+    ws_low: float | None,
+    wd_low: float | None,
+    ws_high: float | None,
+    wd_high: float | None,
+) -> float | None:
+    """Return the 10 m -> 500 hPa bulk wind shear magnitude, or None.
+
+    Decomposes both winds into u/v components and returns the magnitude of
+    their vector difference -- a deep-layer shear proxy in the same speed unit
+    as the inputs (m/s). The sign convention is irrelevant since only the
+    difference magnitude is used.
+    """
+    if ws_low is None or wd_low is None or ws_high is None or wd_high is None:
+        return None
+    low, high = radians(wd_low), radians(wd_high)
+    u_low, v_low = -ws_low * sin(low), -ws_low * cos(low)
+    u_high, v_high = -ws_high * sin(high), -ws_high * cos(high)
+    return sqrt((u_high - u_low) ** 2 + (v_high - v_low) ** 2)

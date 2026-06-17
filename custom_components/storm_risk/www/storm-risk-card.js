@@ -20,6 +20,13 @@ const LEVELS = {
   severe: { label: "Severe", color: "#e53935" },
 };
 
+// Storm-organisation modes (derived from wind shear) shown in the context line.
+const MODES = {
+  pulse: "Pulse storms",
+  organised: "Organised",
+  supercell: "Supercell potential",
+};
+
 const INGREDIENTS = [
   { key: "cape_score", raw: "cape", unit: "J/kg", digits: 0, label: "CAPE", title: "Instability / fuel" },
   { key: "cin_score", raw: "cin", unit: "J/kg", digits: 0, label: "CIN", title: "Lid (gated by CAPE)" },
@@ -86,6 +93,7 @@ class StormRiskCard extends HTMLElement {
             ${unavailable ? "Unavailable" : level.label}
           </div>
         </div>
+        ${unavailable ? "" : this._context(attrs)}
         <div class="body">
           ${this._gauge(risk, color, unavailable)}
           ${
@@ -100,6 +108,23 @@ class StormRiskCard extends HTMLElement {
             : ""
         }
       </ha-card>`;
+  }
+
+  _context(attrs) {
+    // A compact "organisation · shear · trigger" line. Each part is only
+    // shown when the data is present, so models without shear/precip data
+    // just show fewer chips (or none).
+    const parts = [];
+    const mode = MODES[attrs.mode];
+    if (mode) parts.push(mode);
+    if (attrs.shear !== undefined && attrs.shear !== null) {
+      parts.push(`shear ${Number(attrs.shear).toFixed(0)} m/s`);
+    }
+    if (attrs.trigger !== undefined && attrs.trigger !== null) {
+      parts.push(`trigger ${Number(attrs.trigger).toFixed(0)}%`);
+    }
+    if (!parts.length) return "";
+    return `<div class="context">${parts.join(" &middot; ")}</div>`;
   }
 
   _gauge(risk, color, unavailable) {
@@ -219,6 +244,10 @@ class StormRiskCard extends HTMLElement {
         }
         .title { font-size: 1.1rem; font-weight: 500; color: var(--primary-text-color); }
         .level { font-size: 0.9rem; font-weight: 500; }
+        .context {
+          font-size: 0.78rem; color: var(--secondary-text-color);
+          margin: -2px 0 8px;
+        }
         .body { display: flex; align-items: center; gap: 16px; }
         .gauge { position: relative; width: 120px; height: 120px; flex: 0 0 auto; }
         .gauge svg { width: 100%; height: 100%; }

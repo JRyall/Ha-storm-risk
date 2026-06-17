@@ -23,7 +23,7 @@ from .coordinator import StormRiskCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 # This integration is configured only via config entries (UI); there are no
 # YAML options under the `storm_risk:` key. Required because we define

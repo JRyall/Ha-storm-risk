@@ -38,17 +38,29 @@ them into a single 0–100 score.
 | **Temperature** | °C | Current 2 m air temperature. |
 | **Dew point** | °C | Current 2 m dew point — a direct measure of low-level moisture. |
 | **CAPE max (7 day)** | J/kg | Highest CAPE anywhere in the next 7 days; per-day breakdown in attributes. |
-| **Storm risk** | _score_ | Composite **0–100 ingredients score** from CAPE, CIN, and dew point (see below). Unitless — it's how loaded the atmosphere is, not a probability. |
+| **Wind shear** | m/s | Deep-layer (10 m → 500 hPa) bulk shear — how *organised* storms can get. A `mode` attribute classifies it (pulse / organised / supercell). |
+| **Trigger likelihood** | % | Precipitation probability for the current hour — a "will anything actually fire" cross-check. **Not** part of the score. |
+| **Storm risk outlook (7 day)** | _score_ | Highest **storm-risk score** over the next 7 days; per-day breakdown in attributes. |
+| **Storm risk** | _score_ | Composite **0–100 ingredients score** from CAPE, CIN, and dew point (see below). Unitless — how loaded the atmosphere is, not a probability. |
 
-The **Storm risk** sensor also exposes `cape_score`, `cin_score`, `dp_score`,
-and `level` as state attributes so you can see exactly how the score was built,
-plus a `forecast` attribute: the next 24 hours as a list of
-`{datetime, cape, cin, storm_risk}` for graphing (see
+There's also a **Storm risk active** `binary_sensor` that turns on once the
+score crosses the configurable *active threshold* (default 45) — handy as an
+automation condition or in the logbook.
+
+The **Storm risk** sensor exposes `cape_score`, `cin_score`, `dp_score` and
+`level` so you can see how the score was built, plus `shear`, `mode`, `trigger`,
+`peak_score`/`peak_time` (the next-24h peak), and a `forecast` attribute: the
+next 24 hours as a list of `{datetime, cape, cin, storm_risk}` for graphing (see
 [Forecast graphs](#forecast-graphs-apexcharts)).
 
-The **CAPE max (7 day)** sensor exposes a `daily` attribute — a list of
-`{date, cape_max, cape_peak_hour, storm_risk_max}`, one entry per day — for a
-week-ahead outlook.
+The **CAPE max (7 day)** and **Storm risk outlook (7 day)** sensors expose a
+`daily` attribute — a list of `{date, cape_max, cape_peak_hour, storm_risk_max}`,
+one entry per day — for a week-ahead outlook.
+
+> **Shear and trigger degrade gracefully.** They rely on optional Open-Meteo
+> variables (pressure-level winds and precipitation probability). If your
+> chosen model doesn't return them, those sensors read *unknown*, the band cap
+> is skipped, and the rest of the integration carries on unaffected.
 
 > **Recorder note:** the `forecast` and `daily` attributes are lists that
 > change every poll. If you want to keep your history database lean, exclude
@@ -145,8 +157,32 @@ attribute, shown as a coloured tag on the card):
 | 65–84 | `loaded` | Loaded | Properly loaded setup. |
 | 85–100 | `severe` | Severe | All ingredients maxed out. |
 
-The divisors/multiplier and the band thresholds are all editable in the
-[options flow](#options).
+### Wind shear caps the band
+
+The score above is pure *thermodynamics* — it measures whether storms **can**
+form, not whether they'll be **organised**. That's set by **deep-layer wind
+shear**: with too little of it, even a maxed-out airmass only manages
+disorganised "pulse" storms. So shear doesn't change the score — it **caps the
+band**:
+
+| Bulk shear (10 m → 500 hPa) | Highest band allowed | `mode` |
+| --- | --- | --- |
+| below `shear_loaded_min` (default 10 m/s) | Watch | `pulse` |
+| `shear_loaded_min` … `shear_severe_min` (10–18 m/s) | Loaded | `organised` |
+| at/above `shear_severe_min` (default 18 m/s) | Severe (uncapped) | `supercell` |
+
+So a score of 90 with only 6 m/s of shear reports **Watch** (`pulse`), not
+Severe — high instability, but nothing to organise it. The score itself still
+reads 90, and the card's context line shows *why* (`Pulse storms · shear 6 m/s`).
+If the model returns no shear data the cap is skipped.
+
+**Trigger likelihood** (precipitation probability) is reported as its own
+sensor and shown on the card, but is deliberately kept **out** of the score:
+the score is environment *potential*; whether a trigger arrives is a separate
+axis, shown side by side rather than blended in.
+
+The divisors/multiplier, the band thresholds, the shear cutoffs and the active
+threshold are all editable in the [options flow](#options).
 
 ---
 
@@ -204,8 +240,26 @@ After setup, click **Configure** on the integration to tune the scoring:
 - **Quiet / Watch / Loaded / Severe thresholds** (default `25 / 45 / 65 / 85`) —
   the score at which each band begins, for the `level` attribute and the card's
   tag. Must increase: quiet < watch < loaded < severe.
+- **Shear for Loaded / Severe** (default `10 / 18` m/s) — the bulk shear needed
+  to *unlock* those bands. Below the Loaded value the band is capped at Watch;
+  below the Severe value it's capped at Loaded. The Severe value must be ≥ the
+  Loaded value.
+- **Active threshold** (default `45`) — the score at which the **Storm risk
+  active** binary sensor turns on.
 
 Changing options reloads the integration, so new values apply immediately.
+
+To **move a location or rename it** without losing history, click the
+three-dot menu on its entry → **Reconfigure**.
+
+### Band-change events & diagnostics
+
+- Every time a location's band changes, a `storm_risk_band_changed` event fires
+  on the HA bus with `{entry_id, name, from_level, to_level, storm_risk}` — so
+  you can trigger automations on *transitions* (e.g. "first time it reaches
+  Watch today") without polling a numeric state.
+- **Download diagnostics** from the device page for a redacted dump of the
+  config, the computed result and the last raw Open-Meteo response.
 
 ---
 

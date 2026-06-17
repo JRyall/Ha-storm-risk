@@ -50,10 +50,14 @@ blueprint:
         text: {}
     message:
       name: Notification message
-      description: Supports templates. {{ trigger.to_state.state }} is the current risk score.
+      description: >-
+        Supports templates. {{ trigger.to_state.state }} is the current risk
+        score; the peak_time / peak_score attributes give the next-24h peak.
       default: >-
         Storm risk has held at or above the threshold and is now
-        {{ trigger.to_state.state }}/100.
+        {{ trigger.to_state.state }}/100, peaking
+        {{ trigger.to_state.attributes.peak_score }}/100 around
+        {{ trigger.to_state.attributes.peak_time }}.
       selector:
         text:
           multiline: true

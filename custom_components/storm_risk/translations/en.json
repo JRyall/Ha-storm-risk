@@ -12,17 +12,30 @@
           "name": "A friendly name for this location (e.g. Home, Work).",
           "location": "Drag the marker to the point you want to monitor. Defaults to your Home Assistant location."
         }
+      },
+      "reconfigure": {
+        "title": "Edit Storm Risk location",
+        "description": "Change this location's name or move its coordinates. The sensors keep their history.",
+        "data": {
+          "name": "Name",
+          "location": "Location"
+        },
+        "data_description": {
+          "name": "A friendly name for this location (e.g. Home, Work).",
+          "location": "Drag the marker to the point you want to monitor."
+        }
       }
     },
     "abort": {
-      "already_configured": "A Storm Risk location with these coordinates already exists."
+      "already_configured": "A Storm Risk location with these coordinates already exists.",
+      "reconfigure_successful": "Storm Risk location updated."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Storm Risk scoring",
-        "description": "Tune the 0-100 ingredients score. Each ingredient contributes up to 33 points. Lower divisors and a higher dew-point multiplier make the score more sensitive. Thresholds set where each interpretation band begins and must increase: quiet < watch < loaded < severe.",
+        "description": "Tune the 0-100 ingredients score. Each ingredient contributes up to 33 points. Lower divisors and a higher dew-point multiplier make the score more sensitive. Score thresholds set where each band begins (quiet < watch < loaded < severe). Shear thresholds cap how high the band can go without enough wind shear to organise storms.",
         "data": {
           "cape_divisor": "CAPE divisor",
           "cin_divisor": "CIN divisor",
@@ -32,7 +45,10 @@
           "threshold_quiet": "Quiet threshold",
           "threshold_watch": "Watch threshold",
           "threshold_loaded": "Loaded threshold",
-          "threshold_severe": "Severe threshold"
+          "threshold_severe": "Severe threshold",
+          "shear_loaded_min": "Shear for Loaded (m/s)",
+          "shear_severe_min": "Shear for Severe (m/s)",
+          "active_threshold": "Active threshold"
         },
         "data_description": {
           "cape_divisor": "cape_score = clamp(CAPE / divisor, 0, 33). Default 40.",
@@ -43,15 +59,22 @@
           "threshold_quiet": "Score at or above which the band becomes 'Quiet'. Default 25.",
           "threshold_watch": "Score at or above which the band becomes 'Watch'. Default 45.",
           "threshold_loaded": "Score at or above which the band becomes 'Loaded'. Default 65.",
-          "threshold_severe": "Score at or above which the band becomes 'Severe'. Default 85."
+          "threshold_severe": "Score at or above which the band becomes 'Severe'. Default 85.",
+          "shear_loaded_min": "Minimum bulk shear (m/s) to allow the Loaded band; below it the band is capped at Watch (pulse storms). Default 10.",
+          "shear_severe_min": "Minimum bulk shear (m/s) to allow the Severe band; below it the band is capped at Loaded. Default 18.",
+          "active_threshold": "Score at or above which the 'Storm risk active' binary sensor turns on. Default 45."
         }
       }
     },
     "error": {
-      "thresholds_not_ascending": "Thresholds must increase: quiet < watch < loaded < severe."
+      "thresholds_not_ascending": "Thresholds must increase: quiet < watch < loaded < severe.",
+      "shear_not_ascending": "The Severe shear must be at least the Loaded shear."
     }
   },
   "entity": {
+    "binary_sensor": {
+      "storm_risk_active": { "name": "Storm risk active" }
+    },
     "sensor": {
       "cape_now": { "name": "CAPE now" },
       "cin_now": { "name": "CIN now" },
@@ -60,6 +83,9 @@
       "temperature": { "name": "Temperature" },
       "dew_point": { "name": "Dew point" },
       "cape_outlook": { "name": "CAPE max (7 day)" },
+      "shear": { "name": "Wind shear" },
+      "trigger": { "name": "Trigger likelihood" },
+      "storm_risk_outlook": { "name": "Storm risk outlook (7 day)" },
       "storm_risk": { "name": "Storm risk" }
     }
   }

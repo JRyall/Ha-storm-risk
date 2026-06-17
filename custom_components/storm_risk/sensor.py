@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfSpeed, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -30,7 +30,7 @@ UNIT_JOULES_PER_KG = "J/kg"
 class StormRiskSensorDescription(SensorEntityDescription):
     """Describes a Storm Risk sensor and how to read its value."""
 
-    value_fn: Callable[[StormRiskData], float | int | str]
+    value_fn: Callable[[StormRiskData], float | int | str | None]
     attributes_fn: Callable[[StormRiskData], dict[str, Any]] | None = None
 
 
@@ -97,6 +97,35 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         attributes_fn=lambda data: {"daily": data.daily_outlook},
     ),
     StormRiskSensorDescription(
+        key="shear",
+        translation_key="shear",
+        native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-windy",
+        suggested_display_precision=1,
+        value_fn=lambda data: data.shear,
+        attributes_fn=lambda data: {"mode": data.mode},
+    ),
+    StormRiskSensorDescription(
+        key="trigger",
+        translation_key="trigger",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:weather-pouring",
+        suggested_display_precision=0,
+        value_fn=lambda data: data.trigger,
+    ),
+    StormRiskSensorDescription(
+        key="storm_risk_outlook",
+        translation_key="storm_risk_outlook",
+        # Unitless 0-100 score, like the main Storm risk sensor.
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:calendar-alert",
+        suggested_display_precision=0,
+        value_fn=lambda data: data.storm_risk_outlook_max,
+        attributes_fn=lambda data: {"daily": data.daily_outlook},
+    ),
+    StormRiskSensorDescription(
         key="storm_risk",
         translation_key="storm_risk",
         # No unit: this is a 0-100 "ingredients" score, not a probability/%.
@@ -114,6 +143,14 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cape": data.cape_now,
             "cin": data.cin_now,
             "dew_point": data.dew_point,
+            # Organisation (shear) and trigger context -- shown on the card and
+            # available to automations. None when the model lacks the data.
+            "shear": data.shear,
+            "mode": data.mode,
+            "trigger": data.trigger,
+            # Next-24h peak, for notifications and the card's peak marker.
+            "peak_score": data.peak_score,
+            "peak_time": data.peak_time,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },
@@ -163,7 +200,7 @@ class StormRiskSensor(CoordinatorEntity[StormRiskCoordinator], SensorEntity):
         return super().available and self.coordinator.data is not None
 
     @property
-    def native_value(self) -> float | int | str:
+    def native_value(self) -> float | int | str | None:
         """Return the current value for this sensor."""
         return self.entity_description.value_fn(self.coordinator.data)
 
