@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-06-17
+
+### Added
+
+- The card's 24-hour forecast sparkline now **marks the peak hour** with a dot
+  and a small `HH:MM · NN/100` label, so the otherwise flat-looking trend has a
+  concrete "worst it gets, and when" readout.
+
+[2.1.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v2.1.0
+
 ## [2.0.0] - 2026-06-17
 
 The headline number was being read as a probability ("29% chance of a storm"),

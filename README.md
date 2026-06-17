@@ -214,7 +214,8 @@ Changing options reloads the integration, so new values apply immediately.
 The integration **bundles a custom Lovelace card** and registers it
 automatically — there's nothing extra to install and no dashboard resource to
 add by hand. It shows a risk gauge, the three-ingredient score breakdown, and a
-24-hour forecast sparkline, all from the single Storm Risk sensor.
+24-hour forecast sparkline with the peak hour marked (time and score), all from
+the single Storm Risk sensor.
 
 Add it from the dashboard card picker (search "Storm Risk"), or in YAML:
 

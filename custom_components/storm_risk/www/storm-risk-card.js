@@ -96,7 +96,7 @@ class StormRiskCard extends HTMLElement {
         </div>
         ${
           this._config.show_forecast && !unavailable
-            ? this._forecast(attrs.forecast || [])
+            ? this._forecast(attrs.forecast || [], color)
             : ""
         }
       </ha-card>`;
@@ -151,7 +151,7 @@ class StormRiskCard extends HTMLElement {
     return `<div class="breakdown">${rows}</div>`;
   }
 
-  _forecast(forecast) {
+  _forecast(forecast, color) {
     if (!Array.isArray(forecast) || forecast.length < 2) return "";
     const w = 300;
     const h = 56;
@@ -168,13 +168,43 @@ class StormRiskCard extends HTMLElement {
       `${pad},${h - pad} ` + line + ` ${(w - pad).toFixed(1)},${h - pad}`;
     const first = forecast[0].datetime?.slice(11, 16) ?? "";
     const last = forecast[n - 1].datetime?.slice(11, 16) ?? "";
+
+    // Find the peak hour so the (otherwise flat-looking) sparkline gets a
+    // concrete "worst it gets" readout: a dot on the curve plus a time/score.
+    let peak = 0;
+    for (let i = 1; i < n; i++) {
+      if ((Number(forecast[i].storm_risk) || 0) > (Number(forecast[peak].storm_risk) || 0)) {
+        peak = i;
+      }
+    }
+    const peakVal = Math.round(
+      Math.max(0, Math.min(100, Number(forecast[peak].storm_risk) || 0))
+    );
+    const peakTime = forecast[peak].datetime?.slice(11, 16) ?? "";
+    const [pxRaw, pyRaw] = pts[peak];
+    // The svg is stretched to the container width but kept at exactly h px
+    // tall (preserveAspectRatio="none"), so x maps by % of width and y maps
+    // 1:1 to px -- letting us position an HTML marker over the right vertex.
+    const peakLeft = (pxRaw / w) * 100;
+    const labelLeft = Math.max(16, Math.min(84, peakLeft));
+    // Sit the label above the dot, or below it when the peak hugs the top.
+    const labelAbove = pyRaw > 18;
+    const labelTop = labelAbove ? pyRaw - 18 : pyRaw + 7;
+
     return `
       <div class="forecast">
         <div class="forecast-title">Next ${n}h storm risk</div>
-        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-          <polygon class="spark-area" points="${area}"></polygon>
-          <polyline class="spark-line" points="${line}"></polyline>
-        </svg>
+        <div class="spark-wrap">
+          <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+            <polygon class="spark-area" points="${area}"></polygon>
+            <polyline class="spark-line" points="${line}"></polyline>
+          </svg>
+          <span class="peak-dot" style="left:${peakLeft.toFixed(1)}%; top:${pyRaw.toFixed(1)}px; background:${color}"></span>
+          <span class="peak-label"
+            style="left:${labelLeft.toFixed(1)}%; top:${labelTop.toFixed(1)}px; color:${color}">
+            ${peakTime} &middot; ${peakVal}/100
+          </span>
+        </div>
         <div class="forecast-axis"><span>${first}</span><span>${last}</span></div>
       </div>`;
   }
@@ -224,7 +254,19 @@ class StormRiskCard extends HTMLElement {
         .bar-cap { color: var(--secondary-text-color); font-size: 0.75rem; }
         .forecast { margin-top: 14px; }
         .forecast-title { font-size: 0.8rem; color: var(--secondary-text-color); margin-bottom: 2px; }
+        .spark-wrap { position: relative; }
         .forecast svg { width: 100%; height: 56px; display: block; }
+        .peak-dot {
+          position: absolute; width: 7px; height: 7px; border-radius: 50%;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 0 2px var(--card-background-color, #fff);
+          pointer-events: none;
+        }
+        .peak-label {
+          position: absolute; transform: translateX(-50%);
+          font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+          pointer-events: none;
+        }
         .spark-line {
           fill: none; stroke: var(--primary-color); stroke-width: 2;
           vector-effect: non-scaling-stroke;
