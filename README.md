@@ -38,7 +38,7 @@ them into a single 0–100 score.
 | **Temperature** | °C | Current 2 m air temperature. |
 | **Dew point** | °C | Current 2 m dew point — a direct measure of low-level moisture. |
 | **CAPE max (7 day)** | J/kg | Highest CAPE anywhere in the next 7 days; per-day breakdown in attributes. |
-| **Storm risk** | % | Composite 0–100 score from CAPE, CIN, and dew point (see below). |
+| **Storm risk** | _score_ | Composite **0–100 ingredients score** from CAPE, CIN, and dew point (see below). Unitless — it's how loaded the atmosphere is, not a probability. |
 
 The **Storm risk** sensor also exposes `cape_score`, `cin_score`, `dp_score`,
 and `level` as state attributes so you can see exactly how the score was built,
@@ -134,12 +134,16 @@ nonsense.
   nights aren't flattened to zero. Set the floor to `1` for the old ungated
   behaviour, or `0` to gate dew point as hard as CIN.
 
-| Score | `level` | Interpretation |
-| --- | --- | --- |
-| 0–25 | `none` | Nothing brewing. |
-| 25–50 | `present` | Ingredients present, unlikely to fire. |
-| 50–75 | `meaningful` | Meaningful potential. |
-| 75+ | `loaded` | Properly loaded setup. |
+The score is bucketed into five interpretation bands (exposed as the `level`
+attribute, shown as a coloured tag on the card):
+
+| Score | `level` | Tag | Interpretation |
+| --- | --- | --- | --- |
+| 0–24 | `none` | None | Nothing brewing. |
+| 25–44 | `quiet` | Quiet | A few ingredients, very unlikely to fire. |
+| 45–64 | `watch` | Watch | Worth keeping an eye on. |
+| 65–84 | `loaded` | Loaded | Properly loaded setup. |
+| 85–100 | `severe` | Severe | All ingredients maxed out. |
 
 The divisors/multiplier and the band thresholds are all editable in the
 [options flow](#options).
@@ -197,8 +201,9 @@ After setup, click **Configure** on the integration to tune the scoring:
 - **Dew point floor** (default `0.5`) — fraction of the dew-point score kept when
   there's no CAPE. `1` = ungated, `0` = gated as hard as CIN. Lower it if humid,
   stable days still read too high; raise it to keep more overnight sensitivity.
-- **Low / Medium / High thresholds** (default `25 / 50 / 75`) — the boundaries
-  for the `level` attribute. Must increase from low to high.
+- **Quiet / Watch / Loaded / Severe thresholds** (default `25 / 45 / 65 / 85`) —
+  the score at which each band begins, for the `level` attribute and the card's
+  tag. Must increase: quiet < watch < loaded < severe.
 
 Changing options reloads the integration, so new values apply immediately.
 
@@ -331,9 +336,9 @@ series:
 ## Storm alert (blueprint)
 
 The easiest way to get a phone notification when storms look likely is the
-**Storm Risk alert** blueprint — pick the Storm Risk sensor, a threshold (e.g.
-65%), how long it must stay there (e.g. 30 minutes), and which mobile device to
-notify.
+**Storm Risk alert** blueprint — pick the Storm Risk sensor, a score threshold
+(e.g. 65), how long it must stay there (e.g. 30 minutes), and which mobile
+device to notify.
 
 > **Note:** HACS only installs the integration (`custom_components/`), **not**
 > this blueprint — you import the blueprint separately (one tap below). You
@@ -351,10 +356,10 @@ and paste:
 **2. Create the automation** — **Settings → Automations & scenes → Create
 automation → Use blueprint → Storm Risk alert**, fill in the form, and save.
 
-The blueprint uses Home Assistant's native "sustained for" trigger, so "over
-65% for more than half an hour" is handled correctly (and it survives
+The blueprint uses Home Assistant's native "sustained for" trigger, so "over a
+score of 65 for more than half an hour" is handled correctly (and it survives
 restarts). You can create several automations from it for different thresholds
-or locations (e.g. a heads-up at 50% and an urgent one at 85%).
+or locations (e.g. a Watch-level heads-up at 45 and an urgent Severe alert at 85).
 
 ## Example automation
 
@@ -378,7 +383,7 @@ action:
     data:
       title: "⛈️ Storm potential rising"
       message: >-
-        Storm risk is {{ states('sensor.home_storm_risk') }}%
+        Storm risk score is {{ states('sensor.home_storm_risk') }}/100
         (CAPE {{ states('sensor.home_cape_now') }} J/kg,
         peak forecast around
         {{ states('sensor.home_cape_peak_hour_today') }}).

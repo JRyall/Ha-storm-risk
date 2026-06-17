@@ -22,16 +22,17 @@
     "step": {
       "init": {
         "title": "Storm Risk scoring",
-        "description": "Tune the composite score. Each ingredient contributes up to 33 points. Lower divisors and a higher dew-point multiplier make the score more sensitive. Thresholds set the boundaries between the interpretation bands and must increase from low to high.",
+        "description": "Tune the 0-100 ingredients score. Each ingredient contributes up to 33 points. Lower divisors and a higher dew-point multiplier make the score more sensitive. Thresholds set where each interpretation band begins and must increase: quiet < watch < loaded < severe.",
         "data": {
           "cape_divisor": "CAPE divisor",
           "cin_divisor": "CIN divisor",
           "cape_gate": "CAPE gate",
           "dew_point_multiplier": "Dew point multiplier",
           "dew_point_floor": "Dew point floor",
-          "threshold_low": "Low threshold",
-          "threshold_medium": "Medium threshold",
-          "threshold_high": "High threshold"
+          "threshold_quiet": "Quiet threshold",
+          "threshold_watch": "Watch threshold",
+          "threshold_loaded": "Loaded threshold",
+          "threshold_severe": "Severe threshold"
         },
         "data_description": {
           "cape_divisor": "cape_score = clamp(CAPE / divisor, 0, 33). Default 40.",
@@ -39,14 +40,15 @@
           "cape_gate": "CAPE (J/kg) at which the CIN score reaches full weight; below it CIN is scaled down, so zero CAPE scores zero CIN. Set 0 to disable. Default 100.",
           "dew_point_multiplier": "dp_score = clamp((dew point - 10) * multiplier, 0, 33). Default 3.3.",
           "dew_point_floor": "Fraction of the dew-point score kept when there is no CAPE (it's gated by CAPE like CIN, but only down to this floor). 1 = ungated, 0 = fully gated. Default 0.5.",
-          "threshold_low": "At or above this, the level becomes 'present'. Default 25.",
-          "threshold_medium": "At or above this, the level becomes 'meaningful'. Default 50.",
-          "threshold_high": "At or above this, the level becomes 'loaded'. Default 75."
+          "threshold_quiet": "Score at or above which the band becomes 'Quiet'. Default 25.",
+          "threshold_watch": "Score at or above which the band becomes 'Watch'. Default 45.",
+          "threshold_loaded": "Score at or above which the band becomes 'Loaded'. Default 65.",
+          "threshold_severe": "Score at or above which the band becomes 'Severe'. Default 85."
         }
       }
     },
     "error": {
-      "thresholds_not_ascending": "Thresholds must increase: low < medium < high."
+      "thresholds_not_ascending": "Thresholds must increase: quiet < watch < loaded < severe."
     }
   },
   "entity": {

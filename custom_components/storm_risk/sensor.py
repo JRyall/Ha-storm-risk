@@ -99,7 +99,7 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
     StormRiskSensorDescription(
         key="storm_risk",
         translation_key="storm_risk",
-        native_unit_of_measurement="%",
+        # No unit: this is a 0-100 "ingredients" score, not a probability/%.
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:weather-lightning-rainy",
         suggested_display_precision=0,

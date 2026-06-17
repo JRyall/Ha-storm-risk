@@ -31,18 +31,20 @@ from .const import (
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_NAME,
-    CONF_THRESHOLD_HIGH,
-    CONF_THRESHOLD_LOW,
-    CONF_THRESHOLD_MEDIUM,
+    CONF_THRESHOLD_LOADED,
+    CONF_THRESHOLD_QUIET,
+    CONF_THRESHOLD_SEVERE,
+    CONF_THRESHOLD_WATCH,
     DEFAULT_CAPE_DIVISOR,
     DEFAULT_CAPE_GATE,
     DEFAULT_CIN_DIVISOR,
     DEFAULT_DEW_POINT_FLOOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
     DEFAULT_NAME,
-    DEFAULT_THRESHOLD_HIGH,
-    DEFAULT_THRESHOLD_LOW,
-    DEFAULT_THRESHOLD_MEDIUM,
+    DEFAULT_THRESHOLD_LOADED,
+    DEFAULT_THRESHOLD_QUIET,
+    DEFAULT_THRESHOLD_SEVERE,
+    DEFAULT_THRESHOLD_WATCH,
     DOMAIN,
 )
 
@@ -141,9 +143,10 @@ class StormRiskOptionsFlow(OptionsFlow):
 
         if user_input is not None:
             if not (
-                user_input[CONF_THRESHOLD_LOW]
-                < user_input[CONF_THRESHOLD_MEDIUM]
-                < user_input[CONF_THRESHOLD_HIGH]
+                user_input[CONF_THRESHOLD_QUIET]
+                < user_input[CONF_THRESHOLD_WATCH]
+                < user_input[CONF_THRESHOLD_LOADED]
+                < user_input[CONF_THRESHOLD_SEVERE]
             ):
                 errors["base"] = "thresholds_not_ascending"
             else:
@@ -178,18 +181,28 @@ class StormRiskOptionsFlow(OptionsFlow):
                     ),
                 ): _fraction_selector(),
                 vol.Required(
-                    CONF_THRESHOLD_LOW,
-                    default=options.get(CONF_THRESHOLD_LOW, DEFAULT_THRESHOLD_LOW),
-                ): _score_threshold_selector(),
-                vol.Required(
-                    CONF_THRESHOLD_MEDIUM,
+                    CONF_THRESHOLD_QUIET,
                     default=options.get(
-                        CONF_THRESHOLD_MEDIUM, DEFAULT_THRESHOLD_MEDIUM
+                        CONF_THRESHOLD_QUIET, DEFAULT_THRESHOLD_QUIET
                     ),
                 ): _score_threshold_selector(),
                 vol.Required(
-                    CONF_THRESHOLD_HIGH,
-                    default=options.get(CONF_THRESHOLD_HIGH, DEFAULT_THRESHOLD_HIGH),
+                    CONF_THRESHOLD_WATCH,
+                    default=options.get(
+                        CONF_THRESHOLD_WATCH, DEFAULT_THRESHOLD_WATCH
+                    ),
+                ): _score_threshold_selector(),
+                vol.Required(
+                    CONF_THRESHOLD_LOADED,
+                    default=options.get(
+                        CONF_THRESHOLD_LOADED, DEFAULT_THRESHOLD_LOADED
+                    ),
+                ): _score_threshold_selector(),
+                vol.Required(
+                    CONF_THRESHOLD_SEVERE,
+                    default=options.get(
+                        CONF_THRESHOLD_SEVERE, DEFAULT_THRESHOLD_SEVERE
+                    ),
                 ): _score_threshold_selector(),
             }
         )

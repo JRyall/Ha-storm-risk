@@ -2,18 +2,22 @@
  * Storm Risk Card
  *
  * A self-contained Lovelace card for the Storm Risk integration. It needs only
- * the Storm Risk (%) sensor: the score breakdown (cape_score / cin_score /
+ * the Storm Risk score sensor: the score breakdown (cape_score / cin_score /
  * dp_score), the interpretation level, and the 24h forecast all live in that
  * one entity's attributes.
+ *
+ * The headline number is a 0-100 "ingredients" score (how loaded the
+ * atmosphere is), NOT a probability of a storm.
  *
  * Vanilla custom element -- no build step, no external dependencies.
  */
 
 const LEVELS = {
-  none: { label: "Nothing brewing", color: "#43a047" },
-  present: { label: "Ingredients present", color: "#fdd835" },
-  meaningful: { label: "Meaningful potential", color: "#fb8c00" },
-  loaded: { label: "Properly loaded setup", color: "#e53935" },
+  none: { label: "None", color: "#43a047" },
+  quiet: { label: "Quiet", color: "#7cb342" },
+  watch: { label: "Watch", color: "#fdd835" },
+  loaded: { label: "Loaded", color: "#fb8c00" },
+  severe: { label: "Severe", color: "#e53935" },
 };
 
 const INGREDIENTS = [
@@ -28,7 +32,7 @@ const SCORE_CAP = 33;
 class StormRiskCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.entity) {
-      throw new Error("Please define 'entity' (your Storm Risk % sensor).");
+      throw new Error("Please define 'entity' (your Storm Risk score sensor).");
     }
     this._config = {
       name: "Storm Risk",
@@ -120,7 +124,7 @@ class StormRiskCard extends HTMLElement {
         <div class="value" style="color:${color}">
           <span class="value-inner"><span class="num">${
             unavailable ? "-" : risk
-          }</span><span class="pct">%</span></span>
+          }</span><span class="suffix">/100</span></span>
         </div>
       </div>`;
   }
@@ -199,7 +203,7 @@ class StormRiskCard extends HTMLElement {
         }
         .value-inner { line-height: 1; white-space: nowrap; }
         .value .num { font-size: 2.2rem; font-weight: 600; }
-        .value .pct { font-size: 1rem; font-weight: 600; vertical-align: super; margin-left: 1px; }
+        .value .suffix { font-size: 0.85rem; font-weight: 500; opacity: 0.7; margin-left: 1px; }
         .breakdown { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
         .bar-group { display: flex; flex-direction: column; }
         .bar-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }

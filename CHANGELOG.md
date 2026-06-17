@@ -4,6 +4,34 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-17
+
+The headline number was being read as a probability ("29% chance of a storm"),
+which it never was. It's reframed as an unitless **0–100 ingredients score**,
+and the interpretation bands are expanded from four to five.
+
+### Changed (breaking)
+
+- **The Storm Risk sensor is now unitless** (was `%`). The state value is
+  unchanged (still 0–100); only the displayed unit is dropped, and the card now
+  shows `NN/100` instead of `NN%`. Numeric automations (`above: 60`) keep
+  working; dashboards that printed the `%` unit will simply lose it.
+- **Five interpretation bands** instead of four. The `level` attribute values
+  are now `none` / `quiet` / `watch` / `loaded` / `severe` (was `none` /
+  `present` / `meaningful` / `loaded`). Automations that key off the old
+  `present` / `meaningful` strings must be updated.
+- **Threshold options renamed** from `threshold_low/medium/high` to
+  `threshold_quiet/watch/loaded/severe` (defaults `25 / 45 / 65 / 85`). Existing
+  custom threshold values are not migrated and fall back to these defaults —
+  re-set them in the options flow if you had tuned them.
+
+### Changed
+
+- Card tags expanded to **None / Quiet / Watch / Loaded / Severe** with a
+  five-step green→red colour ramp.
+
+[2.0.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v2.0.0
+
 ## [1.5.0] - 2026-06-16
 
 ### Changed

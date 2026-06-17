@@ -30,24 +30,27 @@ from .const import (
     CONF_CIN_DIVISOR,
     CONF_DEW_POINT_FLOOR,
     CONF_DEW_POINT_MULTIPLIER,
-    CONF_THRESHOLD_HIGH,
-    CONF_THRESHOLD_LOW,
-    CONF_THRESHOLD_MEDIUM,
+    CONF_THRESHOLD_LOADED,
+    CONF_THRESHOLD_QUIET,
+    CONF_THRESHOLD_SEVERE,
+    CONF_THRESHOLD_WATCH,
     DEFAULT_CAPE_DIVISOR,
     DEFAULT_CAPE_GATE,
     DEFAULT_CIN_DIVISOR,
     DEFAULT_DEW_POINT_FLOOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
-    DEFAULT_THRESHOLD_HIGH,
-    DEFAULT_THRESHOLD_LOW,
-    DEFAULT_THRESHOLD_MEDIUM,
+    DEFAULT_THRESHOLD_LOADED,
+    DEFAULT_THRESHOLD_QUIET,
+    DEFAULT_THRESHOLD_SEVERE,
+    DEFAULT_THRESHOLD_WATCH,
     DEW_POINT_OFFSET,
     DOMAIN,
     FORECAST_HOURS,
     LEVEL_LOADED,
-    LEVEL_MEANINGFUL,
     LEVEL_NONE,
-    LEVEL_PRESENT,
+    LEVEL_QUIET,
+    LEVEL_SEVERE,
+    LEVEL_WATCH,
     LOOK_AHEAD_HOURS,
     OUTLOOK_DAYS,
     SCORE_CAP,
@@ -354,16 +357,19 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
 
     def _level(self, storm_risk: int) -> str:
         """Map a numeric score to a human-readable interpretation band."""
-        low = int(self._option(CONF_THRESHOLD_LOW, DEFAULT_THRESHOLD_LOW))
-        medium = int(self._option(CONF_THRESHOLD_MEDIUM, DEFAULT_THRESHOLD_MEDIUM))
-        high = int(self._option(CONF_THRESHOLD_HIGH, DEFAULT_THRESHOLD_HIGH))
+        quiet = int(self._option(CONF_THRESHOLD_QUIET, DEFAULT_THRESHOLD_QUIET))
+        watch = int(self._option(CONF_THRESHOLD_WATCH, DEFAULT_THRESHOLD_WATCH))
+        loaded = int(self._option(CONF_THRESHOLD_LOADED, DEFAULT_THRESHOLD_LOADED))
+        severe = int(self._option(CONF_THRESHOLD_SEVERE, DEFAULT_THRESHOLD_SEVERE))
 
-        if storm_risk >= high:
+        if storm_risk >= severe:
+            return LEVEL_SEVERE
+        if storm_risk >= loaded:
             return LEVEL_LOADED
-        if storm_risk >= medium:
-            return LEVEL_MEANINGFUL
-        if storm_risk >= low:
-            return LEVEL_PRESENT
+        if storm_risk >= watch:
+            return LEVEL_WATCH
+        if storm_risk >= quiet:
+            return LEVEL_QUIET
         return LEVEL_NONE
 
 

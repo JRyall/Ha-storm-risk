@@ -3,7 +3,7 @@ blueprint:
   description: >
     Send a Home Assistant Companion (mobile app) notification when the Storm
     Risk score stays at or above a threshold for a sustained period -- for
-    example, over 65% for more than 30 minutes.
+    example, a score over 65 for more than 30 minutes.
 
     Part of the Storm Risk integration:
     https://github.com/JRyall/Ha-storm-risk
@@ -12,22 +12,21 @@ blueprint:
   input:
     storm_risk_sensor:
       name: Storm Risk sensor
-      description: The Storm Risk (%) sensor to watch.
+      description: The Storm Risk score sensor to watch.
       selector:
         entity:
           filter:
             - integration: storm_risk
               domain: sensor
     threshold:
-      name: Threshold (%)
-      description: Notify when the storm risk is at or above this value.
+      name: Score threshold
+      description: Notify when the storm risk score (0-100) is at or above this value.
       default: 65
       selector:
         number:
           min: 0
           max: 100
           step: 1
-          unit_of_measurement: "%"
           mode: slider
     duration:
       name: Sustained for
@@ -51,10 +50,10 @@ blueprint:
         text: {}
     message:
       name: Notification message
-      description: Supports templates. {{ trigger.to_state.state }} is the current risk %.
+      description: Supports templates. {{ trigger.to_state.state }} is the current risk score.
       default: >-
         Storm risk has held at or above the threshold and is now
-        {{ trigger.to_state.state }}%.
+        {{ trigger.to_state.state }}/100.
       selector:
         text:
           multiline: true

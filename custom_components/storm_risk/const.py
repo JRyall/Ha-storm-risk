@@ -57,9 +57,10 @@ CONF_CIN_DIVISOR: Final = "cin_divisor"
 CONF_CAPE_GATE: Final = "cape_gate"
 CONF_DEW_POINT_MULTIPLIER: Final = "dew_point_multiplier"
 CONF_DEW_POINT_FLOOR: Final = "dew_point_floor"
-CONF_THRESHOLD_LOW: Final = "threshold_low"
-CONF_THRESHOLD_MEDIUM: Final = "threshold_medium"
-CONF_THRESHOLD_HIGH: Final = "threshold_high"
+CONF_THRESHOLD_QUIET: Final = "threshold_quiet"
+CONF_THRESHOLD_WATCH: Final = "threshold_watch"
+CONF_THRESHOLD_LOADED: Final = "threshold_loaded"
+CONF_THRESHOLD_SEVERE: Final = "threshold_severe"
 
 # --- Storm Risk scoring defaults ---------------------------------------------
 #
@@ -96,13 +97,23 @@ DEW_POINT_OFFSET: Final = 10.0
 SCORE_CAP: Final = 33.0
 
 # --- Interpretation thresholds (configurable) --------------------------------
+#
+# The 0-100 ingredients score is bucketed into five bands. Each threshold is
+# the score at which you *enter* that band:
+#   score < quiet            -> none
+#   quiet  <= score < watch  -> quiet
+#   watch  <= score < loaded -> watch
+#   loaded <= score < severe -> loaded
+#   score >= severe          -> severe
 
-DEFAULT_THRESHOLD_LOW: Final = 25
-DEFAULT_THRESHOLD_MEDIUM: Final = 50
-DEFAULT_THRESHOLD_HIGH: Final = 75
+DEFAULT_THRESHOLD_QUIET: Final = 25
+DEFAULT_THRESHOLD_WATCH: Final = 45
+DEFAULT_THRESHOLD_LOADED: Final = 65
+DEFAULT_THRESHOLD_SEVERE: Final = 85
 
-# Human-readable risk levels keyed off the thresholds above.
+# Human-readable risk bands keyed off the thresholds above.
 LEVEL_NONE: Final = "none"
-LEVEL_PRESENT: Final = "present"
-LEVEL_MEANINGFUL: Final = "meaningful"
+LEVEL_QUIET: Final = "quiet"
+LEVEL_WATCH: Final = "watch"
 LEVEL_LOADED: Final = "loaded"
+LEVEL_SEVERE: Final = "severe"
