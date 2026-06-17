@@ -25,6 +25,7 @@ from .const import (
     CONF_CAPE_DIVISOR,
     CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
+    CONF_DEW_POINT_FLOOR,
     CONF_DEW_POINT_MULTIPLIER,
     CONF_LATITUDE,
     CONF_LOCATION,
@@ -36,6 +37,7 @@ from .const import (
     DEFAULT_CAPE_DIVISOR,
     DEFAULT_CAPE_GATE,
     DEFAULT_CIN_DIVISOR,
+    DEFAULT_DEW_POINT_FLOOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
     DEFAULT_NAME,
     DEFAULT_THRESHOLD_HIGH,
@@ -55,6 +57,13 @@ def _cape_gate_selector() -> NumberSelector:
     # CAPE (J/kg) below which the CIN contribution is suppressed; 0 disables it.
     return NumberSelector(
         NumberSelectorConfig(min=0, step=10, mode=NumberSelectorMode.BOX)
+    )
+
+
+def _fraction_selector() -> NumberSelector:
+    # A 0..1 fraction (e.g. the dew-point floor), shown as a slider.
+    return NumberSelector(
+        NumberSelectorConfig(min=0, max=1, step=0.05, mode=NumberSelectorMode.SLIDER)
     )
 
 
@@ -162,6 +171,12 @@ class StormRiskOptionsFlow(OptionsFlow):
                         CONF_DEW_POINT_MULTIPLIER, DEFAULT_DEW_POINT_MULTIPLIER
                     ),
                 ): _positive_number_selector(),
+                vol.Required(
+                    CONF_DEW_POINT_FLOOR,
+                    default=options.get(
+                        CONF_DEW_POINT_FLOOR, DEFAULT_DEW_POINT_FLOOR
+                    ),
+                ): _fraction_selector(),
                 vol.Required(
                     CONF_THRESHOLD_LOW,
                     default=options.get(CONF_THRESHOLD_LOW, DEFAULT_THRESHOLD_LOW),

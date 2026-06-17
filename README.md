@@ -106,24 +106,33 @@ The score sums three ingredients, each capped at 33 points (max 99, displayed
 as 100):
 
 ```text
-cape_factor = clamp(cape / 100, 0, 1)            # CIN only counts if CAPE exists
+cape_factor = clamp(cape / 100, 0, 1)            # how much CAPE is present
+dp_factor   = 0.5 + 0.5 * cape_factor            # dew point gated, floored at 0.5
 
-cape_score  = clamp(cape / 40,             0, 33)
-cin_score   = clamp((150 + cin) / 4.5,     0, 33) * cape_factor
-dp_score    = clamp((dew_point - 10) * 3.3, 0, 33)
+cape_score  = clamp(cape / 40,              0, 33)
+cin_score   = clamp((150 + cin) / 4.5,      0, 33) * cape_factor
+dp_score    = clamp((dew_point - 10) * 3.3, 0, 33) * dp_factor
 
 storm_risk  = round(cape_score + cin_score + dp_score)
 ```
 
 where `clamp(x, lo, hi) = max(lo, min(hi, x))`.
 
-**Why the CAPE gate?** Convective inhibition (CIN) measures the strength of the
-"lid" holding back rising air — but a weak lid is only relevant if there's
-instability (CAPE) underneath it for the lid to suppress. With zero CAPE there
-is no storm potential no matter how favourable the CIN, so `cin_score` is
-scaled by `cape_factor`, which ramps from 0 (no CAPE) to 1 once CAPE reaches
-the **CAPE gate** (default 100 J/kg). Set the gate to `0` in options to disable
-this and score CIN unconditionally.
+**Why gate CIN and dew point by CAPE?** Instability (CAPE) is the engine of a
+storm; the lid (CIN) and moisture (dew point) only matter if there's CAPE for
+them to act on. Without gating, a calm, muggy, dead-stable day would score
+highly on moisture and a favourable lid alone — which is meteorological
+nonsense.
+
+- **CIN** is gated fully: `cin_score` scales from 0 (no CAPE) to full once CAPE
+  reaches the **CAPE gate** (default 100 J/kg). Set the gate to `0` to disable.
+- **Dew point** is gated *partially*: it keeps a baseline fraction of its weight
+  even at zero CAPE — the **dew point floor** (default `0.5`). This is a
+  deliberate hedge: Open-Meteo gives a single (surface/mixed-layer) CAPE value,
+  which collapses toward zero overnight even when *elevated* instability could
+  still fire storms. The floor keeps a faint moisture signal so muggy low-CAPE
+  nights aren't flattened to zero. Set the floor to `1` for the old ungated
+  behaviour, or `0` to gate dew point as hard as CIN.
 
 | Score | `level` | Interpretation |
 | --- | --- | --- |
@@ -185,6 +194,9 @@ After setup, click **Configure** on the integration to tune the scoring:
   below it the CIN score is scaled down so zero CAPE scores zero CIN. `0`
   disables the gate.
 - **Dew point multiplier** (default `3.3`) — higher = more sensitive to moisture.
+- **Dew point floor** (default `0.5`) — fraction of the dew-point score kept when
+  there's no CAPE. `1` = ungated, `0` = gated as hard as CIN. Lower it if humid,
+  stable days still read too high; raise it to keep more overnight sensitivity.
 - **Low / Medium / High thresholds** (default `25 / 50 / 75`) — the boundaries
   for the `level` attribute. Must increase from low to high.
 
@@ -431,6 +443,11 @@ Please read these before reading too much into the numbers.
 - **CAPE/CIN are necessary, not sufficient.** Storms also need a trigger
   (fronts, sea breezes, terrain). High CAPE with no trigger often produces
   nothing at all.
+- **Surface CAPE only — nocturnal/elevated storms are a blind spot.** Open-Meteo
+  exposes a single (surface/mixed-layer) CAPE value, which collapses toward zero
+  overnight even when *elevated* instability aloft could still fire storms. The
+  score can under-read in those cases; the dew point floor is a partial hedge,
+  not a fix.
 - **Not a warning service.** This integration does not detect lightning and is
   not a substitute for official warnings. **Never** rely on it for safety.
 

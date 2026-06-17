@@ -28,6 +28,7 @@ from .const import (
     CONF_CAPE_DIVISOR,
     CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
+    CONF_DEW_POINT_FLOOR,
     CONF_DEW_POINT_MULTIPLIER,
     CONF_THRESHOLD_HIGH,
     CONF_THRESHOLD_LOW,
@@ -35,6 +36,7 @@ from .const import (
     DEFAULT_CAPE_DIVISOR,
     DEFAULT_CAPE_GATE,
     DEFAULT_CIN_DIVISOR,
+    DEFAULT_DEW_POINT_FLOOR,
     DEFAULT_DEW_POINT_MULTIPLIER,
     DEFAULT_THRESHOLD_HIGH,
     DEFAULT_THRESHOLD_LOW,
@@ -311,15 +313,28 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         dp_multiplier = float(
             self._option(CONF_DEW_POINT_MULTIPLIER, DEFAULT_DEW_POINT_MULTIPLIER)
         )
+        dp_floor = clamp(
+            float(self._option(CONF_DEW_POINT_FLOOR, DEFAULT_DEW_POINT_FLOOR)),
+            0.0,
+            1.0,
+        )
 
         # A favourable lid is only meaningful if there is CAPE to inhibit, so
         # scale the CIN contribution by how much CAPE is present. Without this,
         # zero CAPE + zero CIN would still award the full CIN score.
         cape_factor = clamp(cape / cape_gate, 0.0, 1.0) if cape_gate > 0 else 1.0
 
+        # Moisture alone is not storm potential, so dew point is gated by CAPE
+        # too -- but only partially (down to dp_floor) so muggy low-CAPE nights
+        # keep a faint signal rather than reading a flat zero.
+        dp_factor = dp_floor + (1.0 - dp_floor) * cape_factor
+
         cape_score = clamp(cape / cape_divisor, 0.0, SCORE_CAP)
         cin_score = clamp((CIN_OFFSET + cin) / cin_divisor, 0.0, SCORE_CAP) * cape_factor
-        dp_score = clamp((dew_point - DEW_POINT_OFFSET) * dp_multiplier, 0.0, SCORE_CAP)
+        dp_score = (
+            clamp((dew_point - DEW_POINT_OFFSET) * dp_multiplier, 0.0, SCORE_CAP)
+            * dp_factor
+        )
         return cape_score, cin_score, dp_score
 
     def _score(

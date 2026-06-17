@@ -28,6 +28,7 @@
           "cin_divisor": "CIN divisor",
           "cape_gate": "CAPE gate",
           "dew_point_multiplier": "Dew point multiplier",
+          "dew_point_floor": "Dew point floor",
           "threshold_low": "Low threshold",
           "threshold_medium": "Medium threshold",
           "threshold_high": "High threshold"
@@ -37,6 +38,7 @@
           "cin_divisor": "cin_score = clamp((150 + CIN) / divisor, 0, 33). Default 4.5.",
           "cape_gate": "CAPE (J/kg) at which the CIN score reaches full weight; below it CIN is scaled down, so zero CAPE scores zero CIN. Set 0 to disable. Default 100.",
           "dew_point_multiplier": "dp_score = clamp((dew point - 10) * multiplier, 0, 33). Default 3.3.",
+          "dew_point_floor": "Fraction of the dew-point score kept when there is no CAPE (it's gated by CAPE like CIN, but only down to this floor). 1 = ungated, 0 = fully gated. Default 0.5.",
           "threshold_low": "At or above this, the level becomes 'present'. Default 25.",
           "threshold_medium": "At or above this, the level becomes 'meaningful'. Default 50.",
           "threshold_high": "At or above this, the level becomes 'loaded'. Default 75."

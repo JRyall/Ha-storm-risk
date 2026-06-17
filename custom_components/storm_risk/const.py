@@ -56,6 +56,7 @@ CONF_CAPE_DIVISOR: Final = "cape_divisor"
 CONF_CIN_DIVISOR: Final = "cin_divisor"
 CONF_CAPE_GATE: Final = "cape_gate"
 CONF_DEW_POINT_MULTIPLIER: Final = "dew_point_multiplier"
+CONF_DEW_POINT_FLOOR: Final = "dew_point_floor"
 CONF_THRESHOLD_LOW: Final = "threshold_low"
 CONF_THRESHOLD_MEDIUM: Final = "threshold_medium"
 CONF_THRESHOLD_HIGH: Final = "threshold_high"
@@ -77,6 +78,15 @@ DEFAULT_DEW_POINT_MULTIPLIER: Final = 3.3
 # ramps to full weight once CAPE is meaningfully present (~100 J/kg = the
 # bottom of the "weak instability" band).
 DEFAULT_CAPE_GATE: Final = 100.0
+
+# Dew point (moisture) is also gated by CAPE, but only partially: moisture
+# alone is not storm potential, yet a hard gate would zero out muggy low-CAPE
+# nights (when surface CAPE collapses but elevated instability may persist,
+# which Open-Meteo's single CAPE value cannot see). The floor is the fraction
+# of dew-point weight retained at zero CAPE:
+#   dp_factor = floor + (1 - floor) * clamp(cape / CAPE_GATE, 0, 1)
+# 1.0 = ungated (old behaviour), 0.0 = fully gated like CIN.
+DEFAULT_DEW_POINT_FLOOR: Final = 0.5
 
 # Constant offsets in the CIN / dew-point formulas. Not user-editable in v1.
 CIN_OFFSET: Final = 150.0

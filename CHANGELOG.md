@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-16
+
+### Changed
+
+- **Dew point is now gated by CAPE** (partially). Moisture alone is not storm
+  potential, so a muggy but dead-stable airmass no longer inflates the score.
+  The dew-point contribution scales with CAPE down to a configurable floor
+  (`dp_factor = floor + (1 - floor) * cape_factor`).
+
+### Added
+
+- **Dew point floor** option (default `0.5`): the fraction of the dew-point
+  score kept at zero CAPE. `1` restores the previous ungated behaviour, `0`
+  gates dew point as hard as CIN. The floor deliberately keeps a faint moisture
+  signal on low-CAPE nights, since Open-Meteo's single CAPE value can't see
+  elevated/nocturnal instability.
+
+### Docs
+
+- README: updated the scoring formula and added a limitation note about the
+  surface-CAPE / nocturnal-storm blind spot.
+
+[1.5.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v1.5.0
+
 ## [1.4.2] - 2026-06-16
 
 ### Fixed
