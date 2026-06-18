@@ -84,6 +84,10 @@ CONF_SHEAR_SEVERE_MIN: Final = "shear_severe_min"
 # Score at or above which the "Storm risk active" binary sensor turns on.
 CONF_ACTIVE_THRESHOLD: Final = "active_threshold"
 
+# Entity (person / device_tracker) whose live GPS the location follows while
+# "roaming mode" is switched on.
+CONF_ROAMING_ENTITY: Final = "roaming_entity"
+
 # --- Storm Risk scoring defaults ---------------------------------------------
 #
 # Each of the three ingredients (CAPE, CIN, dew point) contributes up to 33
@@ -173,3 +177,8 @@ DEFAULT_ACTIVE_THRESHOLD: Final = 45
 # Event fired on the HA bus whenever a location's band changes (e.g. for
 # "notify me when it crosses into Watch" automations without polling).
 EVENT_BAND_CHANGED: Final = f"{DOMAIN}_band_changed"
+
+# While roaming, a move of at least this many metres since the last poll
+# triggers an out-of-cycle refresh so the forecast keeps up while travelling
+# (the regular 30-minute poll still applies otherwise).
+ROAMING_REFRESH_DISTANCE_M: Final = 10_000

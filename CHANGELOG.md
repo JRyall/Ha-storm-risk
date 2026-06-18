@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-06-18
+
+### Added
+
+- **Roaming mode.** A per-location **Roaming** switch makes the forecast follow
+  a predefined device's live GPS (a `person` or `device_tracker`, chosen in the
+  options) instead of its fixed coordinates — for taking the forecast with you
+  when you travel. While on it re-polls early after a move of ~10 km, falls back
+  to home if the device has no GPS fix, and remembers its position across
+  restarts. The card shows a `📍 Following <device>` indicator and the Storm
+  risk sensor exposes `roaming` / `location_source` attributes.
+
+[3.1.0]: https://github.com/JRyall/Ha-storm-risk/releases/tag/v3.1.0
+
 ## [3.0.0] - 2026-06-17
 
 Makes the "Severe" band mean something, adds a trigger cross-check, surfaces a

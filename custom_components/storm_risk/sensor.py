@@ -151,6 +151,9 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             # Next-24h peak, for notifications and the card's peak marker.
             "peak_score": data.peak_score,
             "peak_time": data.peak_time,
+            # Roaming: whether the location is currently following a device.
+            "roaming": data.roaming_active,
+            "location_source": data.location_source,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },

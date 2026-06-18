@@ -45,7 +45,8 @@ them into a single 0–100 score.
 
 There's also a **Storm risk active** `binary_sensor` that turns on once the
 score crosses the configurable *active threshold* (default 45) — handy as an
-automation condition or in the logbook.
+automation condition or in the logbook — and a **Roaming** `switch` (see
+[Roaming mode](#roaming-mode)).
 
 The **Storm risk** sensor exposes `cape_score`, `cin_score`, `dp_score` and
 `level` so you can see how the score was built, plus `shear`, `mode`, `trigger`,
@@ -246,11 +247,27 @@ After setup, click **Configure** on the integration to tune the scoring:
   Loaded value.
 - **Active threshold** (default `45`) — the score at which the **Storm risk
   active** binary sensor turns on.
+- **Roaming device** — the person / device_tracker whose live GPS this location
+  follows when roaming is on (see below). Leave empty to disable.
 
 Changing options reloads the integration, so new values apply immediately.
 
 To **move a location or rename it** without losing history, click the
 three-dot menu on its entry → **Reconfigure**.
+
+### Roaming mode
+
+Going away for the weekend? Pick a **Roaming device** (a `person` or
+`device_tracker`) in the options, then flip the location's **Roaming** switch
+on. While it's on, the forecast follows that device's **live GPS** instead of
+the fixed home coordinates — and re-polls early whenever you've moved more than
+~10 km, so it keeps up as you travel. Turn it off to snap back home.
+
+- If the device has no GPS fix, it safely falls back to the home coordinates.
+- The card shows a `📍 Following <device>` indicator while roaming, and the
+  Storm risk sensor exposes `roaming` / `location_source` attributes.
+- The switch only becomes available once a Roaming device is chosen, and its
+  position is remembered across restarts.
 
 ### Band-change events & diagnostics
 

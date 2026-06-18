@@ -17,9 +17,15 @@ from typing import Any
 from aiohttp import ClientError
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import (
+    Event,
+    EventStateChangedData,
+    async_track_state_change_event,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util.location import distance
 
 from .const import (
     API_FORECAST_DAYS,
@@ -32,6 +38,7 @@ from .const import (
     CONF_CIN_DIVISOR,
     CONF_DEW_POINT_FLOOR,
     CONF_DEW_POINT_MULTIPLIER,
+    CONF_ROAMING_ENTITY,
     CONF_SHEAR_LOADED_MIN,
     CONF_SHEAR_SEVERE_MIN,
     CONF_THRESHOLD_LOADED,
@@ -65,6 +72,7 @@ from .const import (
     MODE_SUPERCELL,
     MODE_UNKNOWN,
     OUTLOOK_DAYS,
+    ROAMING_REFRESH_DISTANCE_M,
     SCORE_CAP,
     UPDATE_INTERVAL,
 )
@@ -115,6 +123,11 @@ class StormRiskData:
     storm_risk_outlook_max: int
     peak_score: int
     peak_time: str
+    # v3.1: roaming. ``roaming_active`` is True only when the switch is on *and*
+    # the followed entity had a usable GPS fix this poll; ``location_source`` is
+    # its friendly name (else None, meaning the fixed home coordinates).
+    roaming_active: bool
+    location_source: str | None
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -136,6 +149,15 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         self._longitude: float = config_entry.data["longitude"]
         # Kept for config-entry diagnostics (the last raw API response).
         self.last_payload: dict[str, Any] | None = None
+        # Roaming state. ``roaming`` is the switch position; the active_* values
+        # record the coordinates actually polled (home, unless roaming with a
+        # GPS fix). ``_roaming_unsub`` removes the move listener when off.
+        self.roaming: bool = False
+        self.roaming_active: bool = False
+        self.active_latitude: float = self._latitude
+        self.active_longitude: float = self._longitude
+        self._location_source: str | None = None
+        self._roaming_unsub: CALLBACK_TYPE | None = None
 
     # --- Options helpers -----------------------------------------------------
     #
@@ -146,13 +168,74 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
     def _option(self, key: str, default: float | int) -> Any:
         return self.config_entry.options.get(key, default)
 
+    # --- Roaming -------------------------------------------------------------
+
+    async def async_set_roaming(self, enabled: bool) -> None:
+        """Turn roaming on/off (from the switch) and re-poll immediately."""
+        self.roaming = enabled
+        if enabled:
+            self._subscribe_roaming()
+        else:
+            self._unsubscribe_roaming()
+        await self.async_request_refresh()
+
+    def _subscribe_roaming(self) -> None:
+        """Watch the followed entity so a big move re-polls out of cycle."""
+        self._unsubscribe_roaming()
+        entity_id = self.config_entry.options.get(CONF_ROAMING_ENTITY)
+        if not entity_id:
+            return
+        self._roaming_unsub = async_track_state_change_event(
+            self.hass, [entity_id], self._handle_tracker_move
+        )
+
+    @callback
+    def _unsubscribe_roaming(self) -> None:
+        """Remove the move listener (on toggle-off or entry unload)."""
+        if self._roaming_unsub is not None:
+            self._roaming_unsub()
+            self._roaming_unsub = None
+
+    @callback
+    def _handle_tracker_move(self, event: Event[EventStateChangedData]) -> None:
+        """Re-poll early when the followed device moves a meaningful distance."""
+        new_state = event.data["new_state"]
+        if new_state is None:
+            return
+        lat = new_state.attributes.get("latitude")
+        lon = new_state.attributes.get("longitude")
+        if lat is None or lon is None:
+            return
+        moved = distance(self.active_latitude, self.active_longitude, lat, lon)
+        if moved is None or moved >= ROAMING_REFRESH_DISTANCE_M:
+            self.hass.async_create_task(self.async_request_refresh())
+
+    def _resolve_location(self) -> tuple[float, float, bool, str | None]:
+        """Return the (lat, lon, roaming_active, source) to poll this cycle.
+
+        Falls back to the fixed home coordinates whenever roaming is off or the
+        followed entity has no usable GPS fix.
+        """
+        if self.roaming:
+            entity_id = self.config_entry.options.get(CONF_ROAMING_ENTITY)
+            state = self.hass.states.get(entity_id) if entity_id else None
+            if state is not None:
+                lat = state.attributes.get("latitude")
+                lon = state.attributes.get("longitude")
+                if lat is not None and lon is not None:
+                    source = state.attributes.get("friendly_name", entity_id)
+                    return float(lat), float(lon), True, source
+        return self._latitude, self._longitude, False, None
+
     # --- Polling -------------------------------------------------------------
 
     async def _async_update_data(self) -> StormRiskData:
         """Fetch the latest forecast and derive every sensor value."""
+        lat, lon, self.roaming_active, self._location_source = self._resolve_location()
+        self.active_latitude, self.active_longitude = lat, lon
         params: dict[str, str | int | float] = {
-            "latitude": self._latitude,
-            "longitude": self._longitude,
+            "latitude": lat,
+            "longitude": lon,
             "hourly": ",".join(API_HOURLY_VARIABLES),
             "forecast_days": API_FORECAST_DAYS,
             "wind_speed_unit": API_WIND_SPEED_UNIT,
@@ -277,6 +360,8 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             storm_risk_outlook_max=storm_risk_outlook_max,
             peak_score=peak_score,
             peak_time=peak_time,
+            roaming_active=self.roaming_active,
+            location_source=self._location_source,
             **scores,
         )
 

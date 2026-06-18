@@ -48,7 +48,8 @@
           "threshold_severe": "Severe threshold",
           "shear_loaded_min": "Shear for Loaded (m/s)",
           "shear_severe_min": "Shear for Severe (m/s)",
-          "active_threshold": "Active threshold"
+          "active_threshold": "Active threshold",
+          "roaming_entity": "Roaming device"
         },
         "data_description": {
           "cape_divisor": "cape_score = clamp(CAPE / divisor, 0, 33). Default 40.",
@@ -62,7 +63,8 @@
           "threshold_severe": "Score at or above which the band becomes 'Severe'. Default 85.",
           "shear_loaded_min": "Minimum bulk shear (m/s) to allow the Loaded band; below it the band is capped at Watch (pulse storms). Default 10.",
           "shear_severe_min": "Minimum bulk shear (m/s) to allow the Severe band; below it the band is capped at Loaded. Default 18.",
-          "active_threshold": "Score at or above which the 'Storm risk active' binary sensor turns on. Default 45."
+          "active_threshold": "Score at or above which the 'Storm risk active' binary sensor turns on. Default 45.",
+          "roaming_entity": "The person or device_tracker to follow when the Roaming switch is on. Leave empty to disable roaming."
         }
       }
     },
@@ -74,6 +76,9 @@
   "entity": {
     "binary_sensor": {
       "storm_risk_active": { "name": "Storm risk active" }
+    },
+    "switch": {
+      "roaming": { "name": "Roaming" }
     },
     "sensor": {
       "cape_now": { "name": "CAPE now" },

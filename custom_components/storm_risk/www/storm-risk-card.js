@@ -115,6 +115,11 @@ class StormRiskCard extends HTMLElement {
     // shown when the data is present, so models without shear/precip data
     // just show fewer chips (or none).
     const parts = [];
+    if (attrs.roaming) {
+      parts.push(
+        `📍 ${attrs.location_source || "Roaming"}`
+      );
+    }
     const mode = MODES[attrs.mode];
     if (mode) parts.push(mode);
     if (attrs.shear !== undefined && attrs.shear !== null) {

@@ -23,7 +23,11 @@ from .coordinator import StormRiskCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 # This integration is configured only via config entries (UI); there are no
 # YAML options under the `storm_risk:` key. Required because we define
@@ -73,6 +77,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: StormRiskConfigEntry) ->
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+    # Ensure the roaming move-listener is torn down with the entry.
+    entry.async_on_unload(coordinator._unsubscribe_roaming)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))

@@ -14,6 +14,8 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
     LocationSelector,
     NumberSelector,
     NumberSelectorConfig,
@@ -32,6 +34,7 @@ from .const import (
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_NAME,
+    CONF_ROAMING_ENTITY,
     CONF_SHEAR_LOADED_MIN,
     CONF_SHEAR_SEVERE_MIN,
     CONF_THRESHOLD_LOADED,
@@ -286,6 +289,16 @@ class StormRiskOptionsFlow(OptionsFlow):
                         CONF_ACTIVE_THRESHOLD, DEFAULT_ACTIVE_THRESHOLD
                     ),
                 ): _score_threshold_selector(),
+                # Optional, and intentionally without a `default` so clearing
+                # the picker (to disable roaming) actually sticks.
+                vol.Optional(
+                    CONF_ROAMING_ENTITY,
+                    description={
+                        "suggested_value": options.get(CONF_ROAMING_ENTITY)
+                    },
+                ): EntitySelector(
+                    EntitySelectorConfig(domain=["person", "device_tracker"])
+                ),
             }
         )
 
