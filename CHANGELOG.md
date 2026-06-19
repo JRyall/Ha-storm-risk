@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.2] - 2026-06-19
+
+### Fixed
+
+- **Card "Configuration Error" / wrong default entity.** Adding the card from
+  the picker pre-filled a hardcoded `sensor.storm_risk_storm_risk`, which only
+  exists if your location is literally named that — everyone else got an
+  unusable card. `getStubConfig` now finds the real `sensor.<name>_storm_risk`
+  on your system. And a missing/blank `entity` no longer throws a cryptic
+  "Configuration Error"; the card shows a clear hint telling you which entity to
+  set instead.
+
 ## [3.2.1] - 2026-06-19
 
 ### Fixed

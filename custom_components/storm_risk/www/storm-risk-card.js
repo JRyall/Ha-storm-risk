@@ -62,16 +62,17 @@ const SCORE_CAP = 33;
 
 class StormRiskCard extends HTMLElement {
   setConfig(config) {
-    if (!config || !config.entity) {
-      throw new Error("Please define 'entity' (your Storm Risk score sensor).");
-    }
+    // Don't throw on a missing entity: a bare throw renders HA's cryptic
+    // "Configuration Error" box. Store the config and let _render() show a
+    // clear, actionable hint instead.
     this._config = {
       name: "Storm Risk",
       show_breakdown: true,
       show_forecast: true,
-      ...config,
+      ...(config || {}),
     };
     this._root = this._root || this.attachShadow({ mode: "open" });
+    if (this._hass) this._render();
   }
 
   set hass(hass) {
@@ -83,13 +84,29 @@ class StormRiskCard extends HTMLElement {
     return 4;
   }
 
-  static getStubConfig() {
-    return { entity: "sensor.storm_risk_storm_risk" };
+  static getStubConfig(hass) {
+    // The entity id depends on the location name (e.g. sensor.home_storm_risk),
+    // so find a real Storm Risk score sensor on this system rather than guess.
+    // Match "<something>_storm_risk" but not "..._storm_risk_outlook".
+    const ids = hass ? Object.keys(hass.states) : [];
+    const match = ids.find((id) => /^sensor\..+_storm_risk$/.test(id));
+    return { entity: match || "sensor.home_storm_risk" };
   }
 
   _render() {
-    if (!this._hass || !this._config) return;
+    if (!this._config) return;
     const entityId = this._config.entity;
+    if (!entityId) {
+      this._root.innerHTML = `
+        ${this._styles()}
+        <ha-card header="Storm Risk">
+          <div class="warn">Set <code>entity:</code> to your Storm Risk
+          sensor — e.g. <code>sensor.home_storm_risk</code>
+          (check Settings → Devices &amp; services → Storm Risk for the id).</div>
+        </ha-card>`;
+      return;
+    }
+    if (!this._hass) return;
     const stateObj = this._hass.states[entityId];
 
     if (!stateObj) {
