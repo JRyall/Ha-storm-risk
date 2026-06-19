@@ -365,6 +365,7 @@ series:
   - entity: sensor.home_storm_risk
     name: Storm risk
     type: area
+    yaxis_id: risk
     data_generator: |
       return entity.attributes.forecast.map(p => {
         return [new Date(p.datetime).getTime(), p.storm_risk];
