@@ -367,7 +367,7 @@ series:
     type: area
     yaxis_id: risk
     data_generator: |
-      return entity.attributes.forecast.map(p => {
+      return (entity.attributes.forecast || []).map(p => {
         return [new Date(p.datetime).getTime(), p.storm_risk];
       });
   - entity: sensor.home_storm_risk
@@ -375,7 +375,7 @@ series:
     type: line
     yaxis_id: cape
     data_generator: |
-      return entity.attributes.forecast.map(p => {
+      return (entity.attributes.forecast || []).map(p => {
         return [new Date(p.datetime).getTime(), p.cape];
       });
 yaxis:
@@ -400,7 +400,7 @@ series:
     name: Daily max CAPE
     type: column
     data_generator: |
-      return entity.attributes.daily.map(d => {
+      return (entity.attributes.daily || []).map(d => {
         return [new Date(d.date).getTime(), d.cape_max];
       });
 ```
