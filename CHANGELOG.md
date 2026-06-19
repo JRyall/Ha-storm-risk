@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-06-19
+
+### Fixed
+
+- **Broken card layout from 3.2.0.** The gauge tooltip was attached to the
+  score `.value`, whose `position: relative` (from the shared `.tip` style)
+  overrode its centring, dropping the big number out of the ring and onto the
+  forecast title. The tooltip now lives on the gauge container, so the number
+  stays centred.
+
 ## [3.2.0] - 2026-06-18
 
 ### Added

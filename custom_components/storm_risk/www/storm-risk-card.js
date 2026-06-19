@@ -166,7 +166,8 @@ class StormRiskCard extends HTMLElement {
     const fill = track * frac;
     const rotate = 90 + (360 - 220) / 2; // centre the gap at the bottom
     return `
-      <div class="gauge">
+      <div class="gauge tip" tabindex="0"
+        aria-label="Storm risk ingredients score, 0 to 100">
         <svg viewBox="0 0 120 120">
           <circle class="track" cx="60" cy="60" r="${r}"
             stroke-dasharray="${track} ${circ}"
@@ -175,17 +176,16 @@ class StormRiskCard extends HTMLElement {
             stroke-dasharray="${fill} ${circ}"
             transform="rotate(${rotate} 60 60)"></circle>
         </svg>
-        <div class="value tip" style="color:${color}"
-          tabindex="0" aria-label="Storm risk ingredients score, 0 to 100">
+        <div class="value" style="color:${color}">
           <span class="value-inner"><span class="num">${
             unavailable ? "-" : risk
           }</span><span class="suffix">/100</span></span>
-          <span class="tip-bubble below center" role="tooltip">
-            A 0–100 <b>ingredients score</b> — how loaded the atmosphere is for
-            storms, from instability (CAPE), the lid (CIN) and moisture. It's
-            <b>not</b> a probability that a storm will happen.
-          </span>
         </div>
+        <span class="tip-bubble below" role="tooltip">
+          A 0–100 <b>ingredients score</b> — how loaded the atmosphere is for
+          storms, from instability (CAPE), the lid (CIN) and moisture. It's
+          <b>not</b> a probability that a storm will happen.
+        </span>
       </div>`;
   }
 
