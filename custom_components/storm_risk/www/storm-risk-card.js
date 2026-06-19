@@ -28,9 +28,33 @@ const MODES = {
 };
 
 const INGREDIENTS = [
-  { key: "cape_score", raw: "cape", unit: "J/kg", digits: 0, label: "CAPE", title: "Instability / fuel" },
-  { key: "cin_score", raw: "cin", unit: "J/kg", digits: 0, label: "CIN", title: "Lid (gated by CAPE)" },
-  { key: "dp_score", raw: "dew_point", unit: "&deg;C", digits: 1, label: "Dew pt", title: "Low-level moisture" },
+  {
+    key: "cape_score",
+    raw: "cape",
+    unit: "J/kg",
+    digits: 0,
+    label: "CAPE",
+    title: "Instability / fuel",
+    tip: "CAPE — Convective Available Potential Energy. The fuel for storms: how much energy is available to lift air. The higher it is, the taller and more vigorous storms can grow.",
+  },
+  {
+    key: "cin_score",
+    raw: "cin",
+    unit: "J/kg",
+    digits: 0,
+    label: "CIN",
+    title: "Lid (gated by CAPE)",
+    tip: "CIN — Convective Inhibition. The “lid” holding storms down. A weak lid lets them fire easily; a strong one can cap them, or let energy build for an explosive release. Only counts when there's CAPE for it to act on.",
+  },
+  {
+    key: "dp_score",
+    raw: "dew_point",
+    unit: "&deg;C",
+    digits: 1,
+    label: "Dew pt",
+    title: "Low-level moisture",
+    tip: "Dew point — low-level moisture. Humid air (a high dew point) feeds storms. It's gated by CAPE here, so a muggy but stable day doesn't over-score on moisture alone.",
+  },
 ];
 
 // Each ingredient contributes up to 33 points.
@@ -151,10 +175,16 @@ class StormRiskCard extends HTMLElement {
             stroke-dasharray="${fill} ${circ}"
             transform="rotate(${rotate} 60 60)"></circle>
         </svg>
-        <div class="value" style="color:${color}">
+        <div class="value tip" style="color:${color}"
+          tabindex="0" aria-label="Storm risk ingredients score, 0 to 100">
           <span class="value-inner"><span class="num">${
             unavailable ? "-" : risk
           }</span><span class="suffix">/100</span></span>
+          <span class="tip-bubble below center" role="tooltip">
+            A 0–100 <b>ingredients score</b> — how loaded the atmosphere is for
+            storms, from instability (CAPE), the lid (CIN) and moisture. It's
+            <b>not</b> a probability that a storm will happen.
+          </span>
         </div>
       </div>`;
   }
@@ -169,9 +199,12 @@ class StormRiskCard extends HTMLElement {
           ? ""
           : `${Number(raw).toFixed(ing.digits)} ${ing.unit}`;
       return `
-        <div class="bar-group" title="${ing.title}">
+        <div class="bar-group">
           <div class="bar-row">
-            <span class="bar-label">${ing.label}</span>
+            <span class="bar-label tip" tabindex="0" aria-label="${ing.label}: ${ing.title}">
+              ${ing.label}
+              <span class="tip-bubble" role="tooltip">${ing.tip}</span>
+            </span>
             <span class="bar-track"><span class="bar-fill" style="width:${pct}%"></span></span>
             <span class="bar-val">${score.toFixed(0)}<span class="bar-cap">/${SCORE_CAP}</span></span>
           </div>
@@ -223,7 +256,15 @@ class StormRiskCard extends HTMLElement {
 
     return `
       <div class="forecast">
-        <div class="forecast-title">Next ${n}h storm risk</div>
+        <div class="forecast-title tip" tabindex="0"
+          aria-label="Next ${n} hour storm-risk score forecast">
+          Next ${n}h storm risk
+          <span class="tip-bubble" role="tooltip">
+            The storm-risk score (0–100) for each of the next ${n} hours. The
+            dot marks the forecast <b>peak</b> — the time it's highest and the
+            score it reaches.
+          </span>
+        </div>
         <div class="spark-wrap">
           <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
             <polygon class="spark-area" points="${area}"></polygon>
@@ -276,6 +317,35 @@ class StormRiskCard extends HTMLElement {
           font-size: 0.72rem; color: var(--secondary-text-color);
         }
         .bar-label { width: 48px; color: var(--secondary-text-color); }
+        /* Hoverable help tooltips (ingredient labels, gauge, forecast). */
+        .tip { position: relative; cursor: help; outline: none; }
+        .bar-label.tip, .forecast-title.tip {
+          border-bottom: 1px dotted var(--secondary-text-color);
+        }
+        /* Shrink the underline to hug the title text, not the full row. */
+        .forecast-title.tip { display: inline-block; }
+        .tip-bubble {
+          position: absolute; left: 0; bottom: calc(100% + 8px);
+          width: 220px; padding: 8px 10px; box-sizing: border-box;
+          border-radius: 8px;
+          background: var(--ha-card-background, var(--card-background-color, #fff));
+          color: var(--primary-text-color);
+          border: 1px solid var(--divider-color, #e0e0e0);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+          font-size: 0.72rem; font-weight: 400; line-height: 1.4;
+          white-space: normal; text-align: left;
+          opacity: 0; visibility: hidden;
+          transition: opacity 0.15s ease;
+          z-index: 9; pointer-events: none;
+        }
+        /* Placement modifiers. */
+        .tip-bubble.below { top: calc(100% + 8px); bottom: auto; }
+        .tip-bubble.center { left: 50%; transform: translateX(-50%); }
+        .tip:hover .tip-bubble,
+        .tip:focus .tip-bubble,
+        .tip:focus-visible .tip-bubble {
+          opacity: 1; visibility: visible;
+        }
         .bar-track {
           flex: 1; height: 8px; border-radius: 4px;
           background: var(--divider-color, #e0e0e0); overflow: hidden;

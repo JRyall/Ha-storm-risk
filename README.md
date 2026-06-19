@@ -286,7 +286,8 @@ The integration **bundles a custom Lovelace card** and registers it
 automatically — there's nothing extra to install and no dashboard resource to
 add by hand. It shows a risk gauge, the three-ingredient score breakdown, and a
 24-hour forecast sparkline with the peak hour marked (time and score), all from
-the single Storm Risk sensor.
+the single Storm Risk sensor. Hover (or focus) the gauge, the CAPE / CIN / Dew
+point labels, or the forecast title for a plain-language explanation of each.
 
 Add it from the dashboard card picker (search "Storm Risk"), or in YAML:
 

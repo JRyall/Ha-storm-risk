@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-06-18
+
+### Added
+
+- **Explanatory tooltips on the card.** Hover (or focus) the **CAPE**, **CIN**
+  and **Dew point** labels, the central **score gauge**, or the **forecast**
+  title for a plain-language explanation of what each one means — so the card
+  teaches itself. Dotted underlines hint at what's hoverable, and the tooltips
+  are keyboard-accessible.
+
 ## [3.1.0] - 2026-06-18
 
 ### Added
