@@ -100,6 +100,11 @@ class StormRiskCard extends HTMLElement {
       name: "Storm Risk",
       show_breakdown: true,
       show_forecast: true,
+      // Stacked-sparkline ingredient colours (override in YAML). Defaults are
+      // three well-separated hues: orange (fuel) / blue (lid) / green (moisture).
+      cape_color: "#ef6c00",
+      cin_color: "#1e88e5",
+      dp_color: "#2e7d32",
       ...(config || {}),
     };
     this._root = this._root || this.attachShadow({ mode: "open" });
@@ -300,17 +305,20 @@ class StormRiskCard extends HTMLElement {
     const c2 = cape.map((v, i) => v + cin[i]);
     const c3 = cape.map((v, i) => v + cin[i] + dp[i]);
 
-    const band = (lower, upper, cls) => {
+    const cfg = this._config;
+    const band = (lower, upper, fill) => {
       const up = forecast.map((_, i) => `${xOf(i).toFixed(1)},${yOf(upper[i]).toFixed(1)}`);
       const lo = forecast
         .map((_, i) => `${xOf(i).toFixed(1)},${yOf(lower[i]).toFixed(1)}`)
         .reverse();
-      return `<polygon class="${cls}" points="${up.concat(lo).join(" ")}"></polygon>`;
+      return `<polygon class="band" style="fill:${fill}" points="${up
+        .concat(lo)
+        .join(" ")}"></polygon>`;
     };
     const bands =
-      band(forecast.map(() => 0), c1, "band-cape") +
-      band(c1, c2, "band-cin") +
-      band(c2, c3, "band-dp");
+      band(forecast.map(() => 0), c1, cfg.cape_color) +
+      band(c1, c2, cfg.cin_color) +
+      band(c2, c3, cfg.dp_color);
     // Total outline on top of the stack.
     const topLine = forecast
       .map((_, i) => `${xOf(i).toFixed(1)},${yOf(c3[i]).toFixed(1)}`)
@@ -344,9 +352,9 @@ class StormRiskCard extends HTMLElement {
             </span>
           </span>
           <span class="legend">
-            <span class="key"><i class="band-cape"></i>CAPE</span>
-            <span class="key"><i class="band-cin"></i>CIN</span>
-            <span class="key"><i class="band-dp"></i>Dew</span>
+            <span class="key"><i style="background:${cfg.cape_color}"></i>CAPE</span>
+            <span class="key"><i style="background:${cfg.cin_color}"></i>CIN</span>
+            <span class="key"><i style="background:${cfg.dp_color}"></i>Dew</span>
           </span>
         </div>
         <div class="spark-wrap">
@@ -469,11 +477,8 @@ class StormRiskCard extends HTMLElement {
           fill: none; stroke: var(--primary-text-color); stroke-width: 1.5;
           opacity: 0.55; vector-effect: non-scaling-stroke;
         }
-        /* Stacked ingredient bands: fuel / lid / moisture. */
-        .band-cape, .legend i.band-cape { fill: #ef6c00; background: #ef6c00; }
-        .band-cin, .legend i.band-cin { fill: #5c6bc0; background: #5c6bc0; }
-        .band-dp, .legend i.band-dp { fill: #26a69a; background: #26a69a; }
-        .band-cape, .band-cin, .band-dp { opacity: 0.85; }
+        /* Stacked ingredient bands (fill set inline from config). */
+        .band { opacity: 0.88; }
         .forecast-axis {
           display: flex; justify-content: space-between;
           font-size: 0.7rem; color: var(--secondary-text-color);

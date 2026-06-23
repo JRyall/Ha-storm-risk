@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-06-23
+
+### Changed
+
+- **Stacked-sparkline colours are now configurable** and the defaults are
+  clearer. New `cape_color` / `cin_color` / `dp_color` card options (defaults
+  orange / blue / green — three well-separated hues, replacing the old
+  orange/indigo/teal that blended together).
+
 ## [3.6.0] - 2026-06-23
 
 ### Changed

@@ -353,6 +353,10 @@ entity: sensor.storm_risk_storm_risk
 # name: Storm Risk — Home
 # show_breakdown: true
 # show_forecast: true
+# Stacked-sparkline ingredient colours (defaults shown):
+# cape_color: "#ef6c00"   # CAPE  (fuel)
+# cin_color:  "#1e88e5"   # CIN   (lid)
+# dp_color:   "#2e7d32"   # Dew   (moisture)
 ```
 
 ### Storm Dynamics card
