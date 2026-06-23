@@ -4,6 +4,27 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-06-23
+
+### Added
+
+Three firing-likelihood classifiers, so a big day tells you more than "33/33":
+
+- **`cape_magnitude`** — how maxed the CAPE really is (weak / moderate /
+  significant / major / extreme), since the bar saturates near 1000 J/kg.
+  Shown under the CAPE bar ("3500 J/kg · Extreme") and as a `magnitude`
+  attribute on the CAPE sensor.
+- **`cin_trend`** — the cap's trajectory vs 6 h ago (strengthening / holding /
+  weakening), the best "will it fire" tell. Shown under the CIN bar and as
+  `trend` / `trend_delta_6h` on the CIN sensor. (A past day of data is now
+  fetched to power the lookback.)
+- **`cap_state`** — whether the lid can break (locked / loadable / unlocked),
+  from CIN strength. Shown in the card's context line ("Loaded · Locked") and
+  on the CIN sensor.
+
+All three are also exposed on the Storm risk sensor for the card and
+automations. Pure classifiers over existing data — the score is unchanged.
+
 ## [3.2.2] - 2026-06-19
 
 ### Fixed

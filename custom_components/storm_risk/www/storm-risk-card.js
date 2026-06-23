@@ -27,6 +27,29 @@ const MODES = {
   supercell: "Supercell potential",
 };
 
+// Cap state (from CIN) — whether the lid can break. Shown in the context line.
+const CAP_STATES = {
+  locked: "Locked",
+  loadable: "Loadable",
+  unlocked: "Cap open",
+};
+
+// CAPE magnitude label, capitalised, for under the CAPE bar.
+const CAPE_MAGNITUDES = {
+  weak: "Weak",
+  moderate: "Moderate",
+  significant: "Significant",
+  major: "Major",
+  extreme: "Extreme",
+};
+
+// CIN trajectory, with an arrow keyed to the cap direction (↑ = strengthening).
+const CIN_TRENDS = {
+  strengthening: "cap strengthening ↑",
+  holding: "cap holding →",
+  weakening: "cap weakening ↓",
+};
+
 const INGREDIENTS = [
   {
     key: "cape_score",
@@ -161,6 +184,12 @@ class StormRiskCard extends HTMLElement {
         `📍 ${attrs.location_source || "Roaming"}`
       );
     }
+    // Cap state tells the firing story ("Loaded · Locked"). Show it whenever
+    // there's a cap worth mentioning or meaningful CAPE behind it.
+    const cap = CAP_STATES[attrs.cap_state];
+    if (cap && (attrs.cap_state !== "unlocked" || Number(attrs.cape) >= 100)) {
+      parts.push(cap);
+    }
     const mode = MODES[attrs.mode];
     if (mode) parts.push(mode);
     if (attrs.shear !== undefined && attrs.shear !== null) {
@@ -211,10 +240,19 @@ class StormRiskCard extends HTMLElement {
       const score = Number(attrs[ing.key] ?? 0);
       const pct = Math.max(0, Math.min(100, (score / SCORE_CAP) * 100));
       const raw = attrs[ing.raw];
-      const sub =
+      let sub =
         raw === undefined || raw === null
           ? ""
           : `${Number(raw).toFixed(ing.digits)} ${ing.unit}`;
+      // Extra context the bar can't show: how maxed the CAPE really is (since
+      // it saturates near 1000 J/kg), and which way the cap is trending.
+      if (sub) {
+        if (ing.key === "cape_score" && CAPE_MAGNITUDES[attrs.cape_magnitude]) {
+          sub += ` &middot; ${CAPE_MAGNITUDES[attrs.cape_magnitude]}`;
+        } else if (ing.key === "cin_score" && CIN_TRENDS[attrs.cin_trend]) {
+          sub += ` &middot; ${CIN_TRENDS[attrs.cin_trend]}`;
+        }
+      }
       return `
         <div class="bar-group">
           <div class="bar-row">

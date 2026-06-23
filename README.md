@@ -50,9 +50,16 @@ automation condition or in the logbook — and a **Roaming** `switch` (see
 
 The **Storm risk** sensor exposes `cape_score`, `cin_score`, `dp_score` and
 `level` so you can see how the score was built, plus `shear`, `mode`, `trigger`,
-`peak_score`/`peak_time` (the next-24h peak), and a `forecast` attribute: the
-next 24 hours as a list of `{datetime, cape, cin, storm_risk}` for graphing (see
+`peak_score`/`peak_time` (the next-24h peak), the firing-likelihood classifiers
+`cape_magnitude` / `cin_trend` / `cap_state` (see
+[Reading the firing likelihood](#reading-the-firing-likelihood)), and a
+`forecast` attribute: the next 24 hours as a list of
+`{datetime, cape, cin, storm_risk}` for graphing (see
 [Forecast graphs](#forecast-graphs-apexcharts)).
+
+The **CAPE now** and **CIN now** sensors also carry these as their own
+attributes: `magnitude` on CAPE, and `trend` / `trend_delta_6h` / `cap_state`
+on CIN — handy for templates and automations.
 
 The **CAPE max (7 day)** and **Storm risk outlook (7 day)** sensors expose a
 `daily` attribute — a list of `{date, cape_max, cape_peak_hour, storm_risk_max}`,
@@ -184,6 +191,28 @@ axis, shown side by side rather than blended in.
 
 The divisors/multiplier, the band thresholds, the shear cutoffs and the active
 threshold are all editable in the [options flow](#options).
+
+### Reading the firing likelihood
+
+The score tells you *how loaded* the atmosphere is, but on a big day the CAPE
+and CIN bars just peg at 33/33 / look strong without telling you whether
+anything will actually go up. Three derived labels fill that gap (on the card:
+under the CAPE/CIN bars and in the header context line):
+
+- **`cape_magnitude`** — how maxed the CAPE really is, since the bar saturates
+  near 1000 J/kg: `weak` (<500) · `moderate` (<1000) · `significant` (<2000) ·
+  `major` (<3000) · `extreme` (≥3000 J/kg). "3500 J/kg — Extreme" reads very
+  differently from a bare "33/33".
+- **`cin_trend`** — the cap's trajectory vs 6 h ago (the best "will it fire"
+  tell): `strengthening` (cap winning, less likely) · `holding` · `weakening`
+  (cap losing, firing more likely). `trend_delta_6h` carries the J/kg change.
+- **`cap_state`** — whether the lid can realistically break: `locked`
+  (CIN ≤ −150, energy stored) · `loadable` (−150…−50, breaks with forcing) ·
+  `unlocked` (≥ −50, cap effectively gone, just needs a trigger).
+
+Together these tell the loaded-gun story: e.g. **extreme** CAPE under a
+**locked**, **strengthening** cap = lots of fuel building but bottled up, while
+**loadable**/**weakening** + a rising trigger is when to pay attention.
 
 ---
 

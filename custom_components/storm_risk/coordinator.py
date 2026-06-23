@@ -30,9 +30,19 @@ from homeassistant.util.location import distance
 from .const import (
     API_FORECAST_DAYS,
     API_HOURLY_VARIABLES,
+    API_PAST_DAYS,
     API_URL,
     API_WIND_SPEED_UNIT,
+    CAP_LOADABLE,
+    CAP_LOCKED,
+    CAP_LOCKED_CIN,
+    CAP_UNLOCKED,
+    CAP_UNLOCKED_CIN,
+    CAPE_MAGNITUDE_LABELS,
+    CAPE_MAGNITUDE_THRESHOLDS,
     CIN_OFFSET,
+    CIN_TREND_DEADBAND,
+    CIN_TREND_HOURS,
     CONF_CAPE_DIVISOR,
     CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
@@ -74,6 +84,10 @@ from .const import (
     OUTLOOK_DAYS,
     ROAMING_REFRESH_DISTANCE_M,
     SCORE_CAP,
+    TREND_HOLDING,
+    TREND_STRENGTHENING,
+    TREND_UNKNOWN,
+    TREND_WEAKENING,
     UPDATE_INTERVAL,
 )
 
@@ -128,6 +142,11 @@ class StormRiskData:
     # its friendly name (else None, meaning the fixed home coordinates).
     roaming_active: bool
     location_source: str | None
+    # v3.3: firing-likelihood classifiers derived from CAPE/CIN.
+    cape_magnitude: str
+    cin_trend: str
+    cin_trend_delta: float | None
+    cap_state: str
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -238,6 +257,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             "longitude": lon,
             "hourly": ",".join(API_HOURLY_VARIABLES),
             "forecast_days": API_FORECAST_DAYS,
+            "past_days": API_PAST_DAYS,
             "wind_speed_unit": API_WIND_SPEED_UNIT,
             # Let Open-Meteo resolve the timezone from the coordinates so the
             # hourly series is anchored to the location's local midnight.
@@ -298,6 +318,12 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         trigger_now = None if trigger_raw is None else int(round(trigger_raw))
         mode = self._mode(shear_now)
 
+        # Firing-likelihood classifiers (how maxed the CAPE is, whether the cap
+        # is strengthening/weakening, and whether it can actually break).
+        cape_magnitude = _cape_magnitude(cape_now)
+        cin_trend, cin_trend_delta = _cin_trend(cin, index)
+        cap_state = _cap_state(cin_now)
+
         # Look-ahead window for the "today" sensors: find the peak CAPE and the
         # local time at which it occurs over the next LOOK_AHEAD_HOURS hours.
         window_end = min(index + LOOK_AHEAD_HOURS, len(cape))
@@ -320,7 +346,9 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
 
         scores = self._score(cape_now, cin_now, dew_now, shear_now)
         forecast = self._build_forecast(times, cape, cin, dew, index)
-        daily_outlook = self._build_outlook(times, cape, cin, dew)
+        # Outlook is today-forward only (we now also request a past day, which
+        # must not leak into the 7-day outlook).
+        daily_outlook = self._build_outlook(times, cape, cin, dew, times[index][:10])
         cape_outlook_max = (
             max(day["cape_max"] for day in daily_outlook)
             if daily_outlook
@@ -362,6 +390,10 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             peak_time=peak_time,
             roaming_active=self.roaming_active,
             location_source=self._location_source,
+            cape_magnitude=cape_magnitude,
+            cin_trend=cin_trend,
+            cin_trend_delta=cin_trend_delta,
+            cap_state=cap_state,
             **scores,
         )
 
@@ -422,10 +454,12 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cape: list[float | None],
         cin: list[float | None],
         dew: list[float | None],
+        today: str,
     ) -> list[dict[str, Any]]:
         """Aggregate the hourly series into a per-day outlook (max CAPE etc.).
 
-        Days preserve chronological order; the result is capped at
+        Days preserve chronological order and start from ``today`` (so the
+        requested past day is excluded); the result is capped at
         ``OUTLOOK_DAYS`` entries.
         """
         days: dict[str, dict[str, Any]] = {}
@@ -434,6 +468,8 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             if cape_i is None:
                 continue
             date = stamp[:10]
+            if date < today:
+                continue
             cin_i, dew_i = cin[i], dew[i]
             storm_risk = 0
             if cin_i is not None and dew_i is not None:
@@ -623,3 +659,38 @@ def _bulk_shear(
     u_low, v_low = -ws_low * sin(low), -ws_low * cos(low)
     u_high, v_high = -ws_high * sin(high), -ws_high * cos(high)
     return sqrt((u_high - u_low) ** 2 + (v_high - v_low) ** 2)
+
+
+def _cape_magnitude(cape: float) -> str:
+    """Classify raw CAPE (J/kg) into a magnitude label ("how maxed" it is)."""
+    for threshold, label in zip(CAPE_MAGNITUDE_THRESHOLDS, CAPE_MAGNITUDE_LABELS):
+        if cape < threshold:
+            return label
+    return CAPE_MAGNITUDE_LABELS[-1]
+
+
+def _cin_trend(cin: list[float | None], index: int) -> tuple[str, float | None]:
+    """Return the CIN trajectory vs ``CIN_TREND_HOURS`` ago, and the delta.
+
+    CIN is negative, so a more-negative delta means the cap is strengthening.
+    Returns ``(TREND_UNKNOWN, None)`` when the lookback data isn't available.
+    """
+    now = _opt(cin, index)
+    past = _opt(cin, index - CIN_TREND_HOURS) if index >= CIN_TREND_HOURS else None
+    if now is None or past is None:
+        return TREND_UNKNOWN, None
+    delta = round(now - past, 1)
+    if delta < -CIN_TREND_DEADBAND:
+        return TREND_STRENGTHENING, delta
+    if delta > CIN_TREND_DEADBAND:
+        return TREND_WEAKENING, delta
+    return TREND_HOLDING, delta
+
+
+def _cap_state(cin: float) -> str:
+    """Classify whether the cap (CIN, J/kg) can realistically break."""
+    if cin <= CAP_LOCKED_CIN:
+        return CAP_LOCKED
+    if cin >= CAP_UNLOCKED_CIN:
+        return CAP_UNLOCKED
+    return CAP_LOADABLE

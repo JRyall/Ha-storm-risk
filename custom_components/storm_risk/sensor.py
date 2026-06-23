@@ -43,6 +43,9 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         icon="mdi:weather-lightning",
         suggested_display_precision=0,
         value_fn=lambda data: data.cape_now,
+        # "How maxed" the CAPE is (weak/moderate/significant/major/extreme),
+        # since the score bar saturates near 1000 J/kg.
+        attributes_fn=lambda data: {"magnitude": data.cape_magnitude},
     ),
     StormRiskSensorDescription(
         key="cin_now",
@@ -52,6 +55,13 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         icon="mdi:shield-cloud",
         suggested_display_precision=0,
         value_fn=lambda data: data.cin_now,
+        # Cap trajectory vs 6h ago (strengthening/holding/weakening) plus the
+        # delta, and whether the cap can realistically break.
+        attributes_fn=lambda data: {
+            "trend": data.cin_trend,
+            "trend_delta_6h": data.cin_trend_delta,
+            "cap_state": data.cap_state,
+        },
     ),
     StormRiskSensorDescription(
         key="cape_max_today",
@@ -154,6 +164,10 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             # Roaming: whether the location is currently following a device.
             "roaming": data.roaming_active,
             "location_source": data.location_source,
+            # Firing-likelihood context for the card.
+            "cape_magnitude": data.cape_magnitude,
+            "cin_trend": data.cin_trend,
+            "cap_state": data.cap_state,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },

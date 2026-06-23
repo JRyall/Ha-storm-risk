@@ -45,6 +45,10 @@ API_WIND_SPEED_UNIT: Final = "ms"
 # "now" plus a 24h look-ahead even late in the day.
 API_FORECAST_DAYS: Final = 7
 
+# One past day is requested too, so the CIN trajectory always has lookback
+# data to compare against (even first thing in the morning).
+API_PAST_DAYS: Final = 1
+
 # The data is a model forecast that only refreshes hourly upstream; 30 minutes
 # is plenty and keeps us well within Open-Meteo's free-tier fair-use limits.
 UPDATE_INTERVAL: Final = timedelta(minutes=30)
@@ -121,6 +125,41 @@ DEW_POINT_OFFSET: Final = 10.0
 
 # Each ingredient is capped at this many points.
 SCORE_CAP: Final = 33.0
+
+# --- "How maxed" / firing-likelihood classifiers -----------------------------
+#
+# The CAPE bar saturates near 1000 J/kg, so on a big day it just reads 33/33.
+# This label communicates the actual magnitude (e.g. "3500 J/kg -- Extreme").
+# Each value is the upper bound (exclusive) for the matching label; anything at
+# or above the last bound gets the final label.
+CAPE_MAGNITUDE_THRESHOLDS: Final = (500.0, 1000.0, 2000.0, 3000.0)
+CAPE_MAGNITUDE_LABELS: Final = (
+    "weak",
+    "moderate",
+    "significant",
+    "major",
+    "extreme",
+)
+
+# CIN trajectory: compare CIN now against this many hours ago. CIN is negative,
+# so a more-negative change means the cap is *strengthening* (less likely to
+# fire). Changes within the deadband (J/kg) read as "holding".
+CIN_TREND_HOURS: Final = 6
+CIN_TREND_DEADBAND: Final = 10.0
+TREND_STRENGTHENING: Final = "strengthening"
+TREND_HOLDING: Final = "holding"
+TREND_WEAKENING: Final = "weakening"
+TREND_UNKNOWN: Final = "unknown"
+
+# Cap state from CIN strength (J/kg, negative): can the lid actually break?
+#   CIN <= -150  -> locked   (energy stored, unlikely to release)
+#   -150 < CIN < -50 -> loadable (could break with moderate forcing)
+#   CIN >= -50   -> unlocked (cap effectively absent, just needs a trigger)
+CAP_LOCKED_CIN: Final = -150.0
+CAP_UNLOCKED_CIN: Final = -50.0
+CAP_LOCKED: Final = "locked"
+CAP_LOADABLE: Final = "loadable"
+CAP_UNLOCKED: Final = "unlocked"
 
 # --- Interpretation thresholds (configurable) --------------------------------
 #
