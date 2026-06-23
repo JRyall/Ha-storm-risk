@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.9.1] - 2026-06-23
+
+### Fixed
+
+- **Spurious trigger time when none is forecast.** The context line showed e.g.
+  `trigger 0% ~13:00 (none visible)` — the time being just the hour of the 0%
+  "peak". The peak time now only shows when a trigger is actually expected
+  (`diurnal`/`synoptic`); otherwise it reads `trigger 0% (none visible)`.
+
 ## [3.9.0] - 2026-06-23
 
 ### Added

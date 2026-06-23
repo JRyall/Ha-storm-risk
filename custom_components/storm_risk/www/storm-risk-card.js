@@ -206,8 +206,13 @@ class StormRiskCard extends HTMLElement {
     if (attrs.trigger !== undefined && attrs.trigger !== null) {
       const src = TRIGGER_SOURCES[attrs.trigger_source];
       const srcTxt = src ? ` (${src})` : "";
-      // Prefer the next-24h forecast peak + time over the bare current value.
-      if (attrs.trigger_peak != null && attrs.trigger_peak_time) {
+      // Show the forecast peak + time only when a trigger is actually expected;
+      // otherwise the time is just the 0% hour, which is meaningless.
+      const expected =
+        attrs.trigger_source &&
+        attrs.trigger_source !== "none" &&
+        attrs.trigger_source !== "unknown";
+      if (expected && attrs.trigger_peak != null && attrs.trigger_peak_time) {
         parts.push(
           `trigger ${Number(attrs.trigger_peak).toFixed(0)}% ~${attrs.trigger_peak_time}${srcTxt}`
         );
