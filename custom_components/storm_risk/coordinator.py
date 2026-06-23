@@ -729,21 +729,38 @@ def _cape_magnitude(cape: float) -> str:
 
 
 def _cin_trend(cin: list[float | None], index: int) -> tuple[str, float | None]:
-    """Return the CIN trajectory vs ``CIN_TREND_HOURS`` ago, and the delta.
+    """Return the CIN trajectory over the last ``CIN_TREND_HOURS`` hours.
 
-    CIN is negative, so a more-negative delta means the cap is strengthening.
-    Returns ``(TREND_UNKNOWN, None)`` when the lookback data isn't available.
+    Uses a least-squares slope over the recent points rather than a single
+    "vs N h ago" comparison, so one anomalous reading (e.g. a flat-zero
+    overnight stretch) can't flip the label. CIN is negative, so a net move
+    toward 0 over the window means the cap is *weakening*. Returns
+    ``(TREND_UNKNOWN, None)`` when there aren't enough points.
     """
-    now = _opt(cin, index)
-    past = _opt(cin, index - CIN_TREND_HOURS) if index >= CIN_TREND_HOURS else None
-    if now is None or past is None:
+    start = max(0, index - CIN_TREND_HOURS)
+    xs: list[int] = []
+    ys: list[float] = []
+    for i in range(start, index + 1):
+        value = _opt(cin, i)
+        if value is not None:
+            xs.append(i)
+            ys.append(value)
+    if len(xs) < 3:
         return TREND_UNKNOWN, None
-    delta = round(now - past, 1)
-    if delta < -CIN_TREND_DEADBAND:
-        return TREND_STRENGTHENING, delta
-    if delta > CIN_TREND_DEADBAND:
-        return TREND_WEAKENING, delta
-    return TREND_HOLDING, delta
+    n = len(xs)
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+    denom = sum((x - mean_x) ** 2 for x in xs)
+    if denom == 0:
+        return TREND_UNKNOWN, None
+    slope = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / denom
+    # Representative net change over the span actually covered.
+    net = round(slope * (xs[-1] - xs[0]), 1)
+    if net > CIN_TREND_DEADBAND:
+        return TREND_WEAKENING, net
+    if net < -CIN_TREND_DEADBAND:
+        return TREND_STRENGTHENING, net
+    return TREND_HOLDING, net
 
 
 def _cap_state(cin: float) -> str:

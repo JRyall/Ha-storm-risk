@@ -60,7 +60,7 @@ The **Storm risk** sensor exposes `cape_score`, `cin_score`, `dp_score` and
 [Forecast graphs](#forecast-graphs-apexcharts)).
 
 The **CAPE now** and **CIN now** sensors also carry these as their own
-attributes: `magnitude` on CAPE, and `trend` / `trend_delta_6h` / `cap_state`
+attributes: `magnitude` on CAPE, and `trend` / `trend_delta` / `cap_state`
 on CIN — handy for templates and automations.
 
 The **CAPE max (7 day)** and **Storm risk outlook (7 day)** sensors expose a
@@ -226,9 +226,10 @@ card under the CAPE/CIN bars):
   near 1000 J/kg: `weak` (<500) · `moderate` (<1000) · `significant` (<2000) ·
   `major` (<3000) · `extreme` (≥3000 J/kg). "3500 J/kg — Extreme" reads very
   differently from a bare "33/33".
-- **`cin_trend`** — the cap's trajectory vs 6 h ago (the best "will it fire"
-  tell): `strengthening` (cap winning, less likely) · `holding` · `weakening`
-  (cap losing, firing more likely). `trend_delta_6h` carries the J/kg change.
+- **`cin_trend`** — the cap's recent trajectory (a least-squares slope over the
+  last few hours, so one odd reading can't flip it): `strengthening` (cap
+  winning, less likely) · `holding` · `weakening` (cap losing, firing more
+  likely). `trend_delta` carries the net J/kg change.
 - **`cap_state`** — whether the lid can realistically break: `locked`
   (CIN ≤ −150, energy stored) · `loadable` (−150…−50, breaks with forcing) ·
   `unlocked` (≥ −50, cap effectively gone, just needs a trigger).

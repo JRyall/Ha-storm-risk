@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-06-23
+
+### Fixed
+
+- **CIN trend could read backwards.** The trajectory compared CIN against a
+  single point exactly 6 h ago, which was fragile — if that point fell in an
+  anomalous stretch (e.g. a flat-zero overnight reading), a clearly *weakening*
+  cap could be labelled "strengthening". It's now a **least-squares slope over
+  the last 4 hours**, so it reflects the current trajectory and one odd reading
+  can't flip it. The ambiguous ↑/↓ arrow is dropped (words only), the tooltip
+  notes it's a recent trend, and the CIN sensor attribute `trend_delta_6h` is
+  renamed `trend_delta`.
+
 ## [3.7.0] - 2026-06-23
 
 ### Changed

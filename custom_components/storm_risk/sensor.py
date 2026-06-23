@@ -64,7 +64,7 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         # delta, and whether the cap can realistically break.
         attributes_fn=lambda data: {
             "trend": data.cin_trend,
-            "trend_delta_6h": data.cin_trend_delta,
+            "trend_delta": data.cin_trend_delta,
             "cap_state": data.cap_state,
         },
     ),

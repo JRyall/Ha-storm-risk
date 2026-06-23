@@ -147,10 +147,11 @@ CAPE_MAGNITUDE_LABELS: Final = (
     "extreme",
 )
 
-# CIN trajectory: compare CIN now against this many hours ago. CIN is negative,
-# so a more-negative change means the cap is *strengthening* (less likely to
-# fire). Changes within the deadband (J/kg) read as "holding".
-CIN_TREND_HOURS: Final = 6
+# CIN trajectory: a least-squares slope over the last CIN_TREND_HOURS hours
+# (robust to a single odd reading, unlike a one-point "vs N h ago" compare).
+# CIN is negative, so a net move toward 0 over the window = cap *weakening*.
+# Changes within the deadband (J/kg, net over the window) read as "holding".
+CIN_TREND_HOURS: Final = 4
 CIN_TREND_DEADBAND: Final = 10.0
 TREND_STRENGTHENING: Final = "strengthening"
 TREND_HOLDING: Final = "holding"

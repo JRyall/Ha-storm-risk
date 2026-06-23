@@ -43,12 +43,12 @@ const CAPE_MAGNITUDES = {
   extreme: "Extreme",
 };
 
-// CIN trajectory (arrow keyed to cap direction). Paired with the cap state on
-// the CIN bar, so kept short here.
+// CIN trajectory (recent trend). Words only — an up/down arrow is ambiguous
+// for a negative quantity, so it's omitted.
 const CIN_TRENDS = {
-  strengthening: "strengthening ↑",
-  holding: "steady →",
-  weakening: "weakening ↓",
+  strengthening: "strengthening",
+  holding: "steady",
+  weakening: "weakening",
 };
 
 // Trigger type, appended to the trigger chip (e.g. "trigger 40% · diurnal").
@@ -75,7 +75,7 @@ const INGREDIENTS = [
     digits: 0,
     label: "CIN",
     title: "Lid (gated by CAPE)",
-    tip: "CIN — Convective Inhibition, the “lid”. This bar is fuller when the lid is WEAK (storms fire easily) and near-empty when the cap is strong — a strong cap reads as Locked here (energy stored, not yet released), which is correct, not a glitch. Only counts when there's CAPE for it to act on.",
+    tip: "CIN — Convective Inhibition, the “lid”. This bar is fuller when the lid is WEAK (storms fire easily) and near-empty when the cap is strong — a strong cap reads as Locked here (energy stored, not yet released), which is correct, not a glitch. “Strengthening/weakening” is the trend over the last few hours. Only counts when there's CAPE for it to act on.",
   },
   {
     key: "dp_score",
