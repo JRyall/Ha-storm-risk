@@ -43,11 +43,12 @@ const CAPE_MAGNITUDES = {
   extreme: "Extreme",
 };
 
-// CIN trajectory, with an arrow keyed to the cap direction (↑ = strengthening).
+// CIN trajectory (arrow keyed to cap direction). Paired with the cap state on
+// the CIN bar, so kept short here.
 const CIN_TRENDS = {
-  strengthening: "cap strengthening ↑",
-  holding: "cap holding →",
-  weakening: "cap weakening ↓",
+  strengthening: "strengthening ↑",
+  holding: "steady →",
+  weakening: "weakening ↓",
 };
 
 // Trigger type, appended to the trigger chip (e.g. "trigger 40% · diurnal").
@@ -74,7 +75,7 @@ const INGREDIENTS = [
     digits: 0,
     label: "CIN",
     title: "Lid (gated by CAPE)",
-    tip: "CIN — Convective Inhibition. The “lid” holding storms down. A weak lid lets them fire easily; a strong one can cap them, or let energy build for an explosive release. Only counts when there's CAPE for it to act on.",
+    tip: "CIN — Convective Inhibition, the “lid”. This bar is fuller when the lid is WEAK (storms fire easily) and near-empty when the cap is strong — a strong cap reads as Locked here (energy stored, not yet released), which is correct, not a glitch. Only counts when there's CAPE for it to act on.",
   },
   {
     key: "dp_score",
@@ -191,12 +192,7 @@ class StormRiskCard extends HTMLElement {
         `📍 ${attrs.location_source || "Roaming"}`
       );
     }
-    // Cap state tells the firing story ("Loaded · Locked"). Show it whenever
-    // there's a cap worth mentioning or meaningful CAPE behind it.
-    const cap = CAP_STATES[attrs.cap_state];
-    if (cap && (attrs.cap_state !== "unlocked" || Number(attrs.cape) >= 100)) {
-      parts.push(cap);
-    }
+    // (Cap state now lives on the CIN bar, where it explains that bar.)
     const mode = MODES[attrs.mode];
     if (mode) parts.push(mode);
     if (attrs.shear !== undefined && attrs.shear !== null) {
@@ -259,8 +255,13 @@ class StormRiskCard extends HTMLElement {
       if (sub) {
         if (ing.key === "cape_score" && CAPE_MAGNITUDES[attrs.cape_magnitude]) {
           sub += ` &middot; ${CAPE_MAGNITUDES[attrs.cape_magnitude]}`;
-        } else if (ing.key === "cin_score" && CIN_TRENDS[attrs.cin_trend]) {
-          sub += ` &middot; ${CIN_TRENDS[attrs.cin_trend]}`;
+        } else if (ing.key === "cin_score") {
+          // Cap state explains why a strong (very negative) CIN reads low here;
+          // the trend says which way it's heading.
+          const bits = [CAP_STATES[attrs.cap_state], CIN_TRENDS[attrs.cin_trend]]
+            .filter(Boolean)
+            .join(", ");
+          if (bits) sub += ` &middot; ${bits}`;
         }
       }
       return `
@@ -282,60 +283,78 @@ class StormRiskCard extends HTMLElement {
   _forecast(forecast, color) {
     if (!Array.isArray(forecast) || forecast.length < 2) return "";
     const w = 300;
-    const h = 56;
+    const h = 84;
     const pad = 4;
     const n = forecast.length;
-    const pts = forecast.map((p, i) => {
-      const x = pad + (i * (w - 2 * pad)) / (n - 1);
-      const v = Math.max(0, Math.min(100, Number(p.storm_risk) || 0));
-      const y = h - pad - (v / 100) * (h - 2 * pad);
-      return [x, y];
-    });
-    const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-    const area =
-      `${pad},${h - pad} ` + line + ` ${(w - pad).toFixed(1)},${h - pad}`;
+    const num = (v) => Number(v) || 0;
+    const xOf = (i) => pad + (i * (w - 2 * pad)) / (n - 1);
+    // y for a 0-100 stacked total; each component is 0-33, three stack to ~99.
+    const yOf = (v) =>
+      h - pad - (Math.max(0, Math.min(100, v)) / 100) * (h - 2 * pad);
+
+    // Cumulative stack boundaries per hour: 0, CAPE, CAPE+CIN, CAPE+CIN+Dew.
+    const cape = forecast.map((p) => num(p.cape_score));
+    const cin = forecast.map((p) => num(p.cin_score));
+    const dp = forecast.map((p) => num(p.dp_score));
+    const c1 = cape;
+    const c2 = cape.map((v, i) => v + cin[i]);
+    const c3 = cape.map((v, i) => v + cin[i] + dp[i]);
+
+    const band = (lower, upper, cls) => {
+      const up = forecast.map((_, i) => `${xOf(i).toFixed(1)},${yOf(upper[i]).toFixed(1)}`);
+      const lo = forecast
+        .map((_, i) => `${xOf(i).toFixed(1)},${yOf(lower[i]).toFixed(1)}`)
+        .reverse();
+      return `<polygon class="${cls}" points="${up.concat(lo).join(" ")}"></polygon>`;
+    };
+    const bands =
+      band(forecast.map(() => 0), c1, "band-cape") +
+      band(c1, c2, "band-cin") +
+      band(c2, c3, "band-dp");
+    // Total outline on top of the stack.
+    const topLine = forecast
+      .map((_, i) => `${xOf(i).toFixed(1)},${yOf(c3[i]).toFixed(1)}`)
+      .join(" ");
+
     const first = forecast[0].datetime?.slice(11, 16) ?? "";
     const last = forecast[n - 1].datetime?.slice(11, 16) ?? "";
 
-    // Find the peak hour so the (otherwise flat-looking) sparkline gets a
-    // concrete "worst it gets" readout: a dot on the curve plus a time/score.
+    // Peak hour of the total score -> dot + label on the top of the stack.
     let peak = 0;
     for (let i = 1; i < n; i++) {
-      if ((Number(forecast[i].storm_risk) || 0) > (Number(forecast[peak].storm_risk) || 0)) {
-        peak = i;
-      }
+      if (num(forecast[i].storm_risk) > num(forecast[peak].storm_risk)) peak = i;
     }
-    const peakVal = Math.round(
-      Math.max(0, Math.min(100, Number(forecast[peak].storm_risk) || 0))
-    );
+    const peakVal = Math.round(Math.max(0, Math.min(100, num(forecast[peak].storm_risk))));
     const peakTime = forecast[peak].datetime?.slice(11, 16) ?? "";
-    const [pxRaw, pyRaw] = pts[peak];
-    // The svg is stretched to the container width but kept at exactly h px
-    // tall (preserveAspectRatio="none"), so x maps by % of width and y maps
-    // 1:1 to px -- letting us position an HTML marker over the right vertex.
-    const peakLeft = (pxRaw / w) * 100;
+    const peakLeft = (xOf(peak) / w) * 100;
+    const peakTop = yOf(c3[peak]);
     const labelLeft = Math.max(16, Math.min(84, peakLeft));
-    // Sit the label above the dot, or below it when the peak hugs the top.
-    const labelAbove = pyRaw > 18;
-    const labelTop = labelAbove ? pyRaw - 18 : pyRaw + 7;
+    const labelTop = peakTop > 18 ? peakTop - 18 : peakTop + 7;
 
     return `
       <div class="forecast">
-        <div class="forecast-title tip" tabindex="0"
-          aria-label="Next ${n} hour storm-risk score forecast">
-          Next ${n}h storm risk
-          <span class="tip-bubble" role="tooltip">
-            The storm-risk score (0–100) for each of the next ${n} hours. The
-            dot marks the forecast <b>peak</b> — the time it's highest and the
-            score it reaches.
+        <div class="forecast-head">
+          <span class="forecast-title tip" tabindex="0"
+            aria-label="Next ${n} hour ingredient mix forecast">
+            Next ${n}h ingredient mix
+            <span class="tip-bubble" role="tooltip">
+              The score split into its ingredients each hour — CAPE, CIN and dew
+              point stack to the total (0–100). The dot marks the forecast
+              <b>peak</b> (time and score).
+            </span>
+          </span>
+          <span class="legend">
+            <span class="key"><i class="band-cape"></i>CAPE</span>
+            <span class="key"><i class="band-cin"></i>CIN</span>
+            <span class="key"><i class="band-dp"></i>Dew</span>
           </span>
         </div>
         <div class="spark-wrap">
           <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-            <polygon class="spark-area" points="${area}"></polygon>
-            <polyline class="spark-line" points="${line}"></polyline>
+            ${bands}
+            <polyline class="spark-line" points="${topLine}"></polyline>
           </svg>
-          <span class="peak-dot" style="left:${peakLeft.toFixed(1)}%; top:${pyRaw.toFixed(1)}px; background:${color}"></span>
+          <span class="peak-dot" style="left:${peakLeft.toFixed(1)}%; top:${peakTop.toFixed(1)}px; background:${color}"></span>
           <span class="peak-label"
             style="left:${labelLeft.toFixed(1)}%; top:${labelTop.toFixed(1)}px; color:${color}">
             ${peakTime} &middot; ${peakVal}/100
@@ -422,9 +441,19 @@ class StormRiskCard extends HTMLElement {
         .bar-val { width: 46px; text-align: right; color: var(--primary-text-color); }
         .bar-cap { color: var(--secondary-text-color); font-size: 0.75rem; }
         .forecast { margin-top: 14px; }
-        .forecast-title { font-size: 0.8rem; color: var(--secondary-text-color); margin-bottom: 2px; }
+        .forecast-head {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 3px;
+        }
+        .forecast-title { font-size: 0.8rem; color: var(--secondary-text-color); }
+        .legend { display: flex; gap: 10px; font-size: 0.7rem;
+          color: var(--secondary-text-color); }
+        .legend .key { display: inline-flex; align-items: center; gap: 4px; }
+        .legend i {
+          width: 9px; height: 9px; border-radius: 2px; display: inline-block;
+        }
         .spark-wrap { position: relative; }
-        .forecast svg { width: 100%; height: 56px; display: block; }
+        .forecast svg { width: 100%; height: 84px; display: block; }
         .peak-dot {
           position: absolute; width: 7px; height: 7px; border-radius: 50%;
           transform: translate(-50%, -50%);
@@ -437,10 +466,14 @@ class StormRiskCard extends HTMLElement {
           pointer-events: none;
         }
         .spark-line {
-          fill: none; stroke: var(--primary-color); stroke-width: 2;
-          vector-effect: non-scaling-stroke;
+          fill: none; stroke: var(--primary-text-color); stroke-width: 1.5;
+          opacity: 0.55; vector-effect: non-scaling-stroke;
         }
-        .spark-area { fill: var(--primary-color); opacity: 0.12; }
+        /* Stacked ingredient bands: fuel / lid / moisture. */
+        .band-cape, .legend i.band-cape { fill: #ef6c00; background: #ef6c00; }
+        .band-cin, .legend i.band-cin { fill: #5c6bc0; background: #5c6bc0; }
+        .band-dp, .legend i.band-dp { fill: #26a69a; background: #26a69a; }
+        .band-cape, .band-cin, .band-dp { opacity: 0.85; }
         .forecast-axis {
           display: flex; justify-content: space-between;
           font-size: 0.7rem; color: var(--secondary-text-color);

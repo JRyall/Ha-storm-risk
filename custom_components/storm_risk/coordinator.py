@@ -498,6 +498,11 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
                     "cape": round(cape_i, 1),
                     "cin": round(cin_i, 1),
                     "storm_risk": round(cape_s + cin_s + dp_s),
+                    # Per-hour component scores (each 0-33) for the stacked
+                    # ingredient sparkline.
+                    "cape_score": round(cape_s, 1),
+                    "cin_score": round(cin_s, 1),
+                    "dp_score": round(dp_s, 1),
                 }
             )
         return forecast

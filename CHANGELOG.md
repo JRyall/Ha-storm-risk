@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-06-23
+
+### Changed
+
+- **The 24-hour sparkline is now a stacked ingredient mix.** CAPE, CIN and
+  dew-point scores stack to the total each hour (with a legend), so you can see
+  *which* ingredient drives the score over time — not just the total. Taller
+  chart; the peak marker and tooltip are kept. The `forecast` attribute now
+  carries `cape_score` / `cin_score` / `dp_score` per hour.
+
+### Fixed / clarified
+
+- **CIN bar at strong cap looked broken.** A strong cap (e.g. −173 J/kg) reads
+  near-empty on the CIN bar because the bar measures how much the lid *favours
+  firing* — the opposite of the other bars. Reviewed the algorithm at extremes
+  (no out-of-range/NaN issues; behaviour is correct). The cap state now shows on
+  the CIN bar itself ("−173 J/kg · Locked, weakening ↓") and the tooltip explains
+  the inverted bar, so it reads as intentional rather than a glitch. No scoring
+  change.
+
 ## [3.5.0] - 2026-06-23
 
 ### Added

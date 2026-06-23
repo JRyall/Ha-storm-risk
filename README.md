@@ -213,8 +213,14 @@ threshold are all editable in the [options flow](#options).
 
 The score tells you *how loaded* the atmosphere is, but on a big day the CAPE
 and CIN bars just peg at 33/33 / look strong without telling you whether
-anything will actually go up. Three derived labels fill that gap (on the card:
-under the CAPE/CIN bars and in the header context line):
+anything will actually go up. Three derived labels fill that gap (shown on the
+card under the CAPE/CIN bars):
+
+> **Note on the CIN bar:** it measures how much the lid *favours firing*, so a
+> **weak** cap (CIN near 0) fills it and a **strong** cap (e.g. −173 J/kg) reads
+> near-**empty** — the opposite of the other bars. That's intentional, not a
+> glitch: a strong cap suppresses storms *now*, and the `cap_state` label
+> (`locked`) carries the stored-energy / "loaded gun" story instead.
 
 - **`cape_magnitude`** — how maxed the CAPE really is, since the bar saturates
   near 1000 J/kg: `weak` (<500) · `moderate` (<1000) · `significant` (<2000) ·
@@ -332,8 +338,11 @@ The integration **bundles a custom Lovelace card** and registers it
 automatically — there's nothing extra to install and no dashboard resource to
 add by hand. It shows a risk gauge, the three-ingredient score breakdown, and a
 24-hour forecast sparkline with the peak hour marked (time and score), all from
-the single Storm Risk sensor. Hover (or focus) the gauge, the CAPE / CIN / Dew
-point labels, or the forecast title for a plain-language explanation of each.
+the single Storm Risk sensor. The 24-hour sparkline is a **stacked ingredient
+mix** — CAPE, CIN and dew-point scores stack to the total each hour, so you can
+see *which* ingredient is driving the score over time. Hover (or focus) the
+gauge, the CAPE / CIN / Dew point labels, or the forecast title for a
+plain-language explanation of each.
 
 Add it from the dashboard card picker (search "Storm Risk"), or in YAML:
 
