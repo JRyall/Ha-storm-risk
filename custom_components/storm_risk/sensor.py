@@ -129,8 +129,13 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         icon="mdi:weather-pouring",
         suggested_display_precision=0,
         value_fn=lambda data: data.trigger,
-        # Best-effort trigger type: none / diurnal / synoptic / unknown.
-        attributes_fn=lambda data: {"source": data.trigger_source},
+        attributes_fn=lambda data: {
+            # Best-effort trigger type: none / diurnal / synoptic / unknown.
+            "source": data.trigger_source,
+            # Forecast peak likelihood over the next 24h and when it occurs.
+            "peak": data.trigger_peak,
+            "peak_time": data.trigger_peak_time,
+        },
     ),
     StormRiskSensorDescription(
         key="storm_motion",
@@ -197,6 +202,8 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cin_trend": data.cin_trend,
             "cap_state": data.cap_state,
             "trigger_source": data.trigger_source,
+            "trigger_peak": data.trigger_peak,
+            "trigger_peak_time": data.trigger_peak_time,
             # Storm dynamics (for the Storm Dynamics card).
             "storm_motion_dir": data.storm_motion_dir,
             "storm_motion_cardinal": data.storm_motion_cardinal,

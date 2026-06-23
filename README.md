@@ -206,6 +206,11 @@ over the next 24 h (also `trigger_source` on the Storm risk sensor / card):
 > terrain-elevation and coastline data Open-Meteo doesn't provide per point, and
 > a wrong "sea breeze incoming" is worse than no label.
 
+It also **forecasts the trigger timing**: `peak` / `peak_time` attributes give
+the highest trigger likelihood over the next 24 h and when it occurs (e.g.
+`70% ~16:00`). On the card this shows in the context line as `trigger 70% ~16:00`
+— the key "loaded-but-locked, so *when* might it fire" read.
+
 The divisors/multiplier, the band thresholds, the shear cutoffs and the active
 threshold are all editable in the [options flow](#options).
 

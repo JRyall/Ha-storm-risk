@@ -165,6 +165,9 @@ class StormRiskData:
     cap_state: str
     # v3.4: best-effort trigger *type* (none/diurnal/synoptic/unknown).
     trigger_source: str
+    # v3.9: trigger forecast -- peak likelihood over the next 24h and when.
+    trigger_peak: int | None
+    trigger_peak_time: str | None
     # v3.5: storm dynamics (second card). Motion is the deep-layer steering
     # vector storms would move *toward*; hail is a favourability flag.
     storm_motion_dir: float | None
@@ -355,6 +358,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cin_trend, cin_trend_delta = _cin_trend(cin, index)
         cap_state = _cap_state(cin_now)
         trigger_source = _trigger_source(precip_prob, pressure, times, index)
+        trigger_peak, trigger_peak_time = _trigger_peak(precip_prob, times, index)
 
         # Storm dynamics: deep-layer steering motion + hail favourability.
         motion_dir, motion_speed = _storm_motion(
@@ -439,6 +443,8 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             cin_trend_delta=cin_trend_delta,
             cap_state=cap_state,
             trigger_source=trigger_source,
+            trigger_peak=trigger_peak,
+            trigger_peak_time=trigger_peak_time,
             storm_motion_dir=None if motion_dir is None else round(motion_dir),
             storm_motion_cardinal=motion_cardinal,
             storm_motion_speed=(
@@ -817,6 +823,30 @@ def _trigger_source(
     # Meaningful precip outside the afternoon, pressure not clearly falling:
     # not heating-driven, so attribute it to (weaker) synoptic forcing.
     return SOURCE_SYNOPTIC
+
+
+def _trigger_peak(
+    precip: list[float | None], times: list[str], index: int
+) -> tuple[int | None, str | None]:
+    """Return the peak trigger likelihood over the next 24h and when it occurs.
+
+    The "will anything fire, and when" forecast: the maximum precipitation
+    probability in the look-ahead window and its local time. (None, None) when
+    there's no precip data.
+    """
+    end = min(index + LOOK_AHEAD_HOURS, len(times))
+    best_pp: float | None = None
+    best_time: str | None = None
+    for i in range(index, end):
+        pp = _opt(precip, i)
+        if pp is None:
+            continue
+        if best_pp is None or pp > best_pp:
+            best_pp = pp
+            best_time = times[i][11:16]
+    if best_pp is None:
+        return None, None
+    return int(round(best_pp)), best_time
 
 
 def _storm_motion(

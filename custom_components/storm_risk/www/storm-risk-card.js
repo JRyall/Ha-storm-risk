@@ -205,9 +205,15 @@ class StormRiskCard extends HTMLElement {
     }
     if (attrs.trigger !== undefined && attrs.trigger !== null) {
       const src = TRIGGER_SOURCES[attrs.trigger_source];
-      parts.push(
-        `trigger ${Number(attrs.trigger).toFixed(0)}%${src ? ` ${src}` : ""}`
-      );
+      const srcTxt = src ? ` (${src})` : "";
+      // Prefer the next-24h forecast peak + time over the bare current value.
+      if (attrs.trigger_peak != null && attrs.trigger_peak_time) {
+        parts.push(
+          `trigger ${Number(attrs.trigger_peak).toFixed(0)}% ~${attrs.trigger_peak_time}${srcTxt}`
+        );
+      } else {
+        parts.push(`trigger ${Number(attrs.trigger).toFixed(0)}%${srcTxt}`);
+      }
     }
     if (!parts.length) return "";
     return `<div class="context">${parts.join(" &middot; ")}</div>`;
