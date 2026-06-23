@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-06-23
+
+### Added
+
+- **Trigger-type classification** (`trigger_source`) — beyond the 0–100%
+  likelihood, a best-effort label for the *kind* of trigger forecast over the
+  next 24 h: `none` (cap likely holds), `diurnal` (afternoon-peaked, steady
+  pressure — heating), or `synoptic` (falling pressure or non-afternoon precip
+  — forced lift). Shown on the card's trigger chip and as a `source` attribute
+  on the Trigger sensor. **Orographic** and **sea-breeze convergence** triggers
+  are intentionally *not* inferred — they need terrain/coastline data
+  Open-Meteo doesn't expose per grid point, so guessing them would mislead.
+  Fetches `pressure_msl` for the pressure-tendency signal; degrades gracefully
+  (timing-only, or `unknown`) when data is missing.
+
 ## [3.3.0] - 2026-06-23
 
 ### Added

@@ -35,6 +35,7 @@ API_HOURLY_VARIABLES: Final = (
     "wind_speed_500hPa",
     "wind_direction_500hPa",
     "precipitation_probability",
+    "pressure_msl",
 )
 
 # Wind speeds are requested in m/s so the derived bulk shear is in m/s, the
@@ -160,6 +161,22 @@ CAP_UNLOCKED_CIN: Final = -50.0
 CAP_LOCKED: Final = "locked"
 CAP_LOADABLE: Final = "loadable"
 CAP_UNLOCKED: Final = "unlocked"
+
+# Trigger-source classification: the *type* of lift forecast, but only the
+# kinds reliably derivable from a single grid point. Orographic and sea-breeze
+# convergence are intentionally NOT inferred -- they need terrain elevation and
+# coastline data Open-Meteo doesn't expose per point, so we don't guess.
+#   none      -- little/no precip probability in the window (cap likely holds)
+#   diurnal   -- precip peaks in the afternoon with steady pressure (heating)
+#   synoptic  -- pressure falling, or precip outside the afternoon (forced lift)
+TRIGGER_SOURCE_MIN_PROB: Final = 30        # % window max below which -> "none"
+TRIGGER_AFTERNOON_START: Final = 12        # local hour, inclusive
+TRIGGER_AFTERNOON_END: Final = 19
+TRIGGER_PRESSURE_FALL_HPA: Final = 3.0     # fall over the window implying a system
+SOURCE_NONE: Final = "none"
+SOURCE_DIURNAL: Final = "diurnal"
+SOURCE_SYNOPTIC: Final = "synoptic"
+SOURCE_UNKNOWN: Final = "unknown"
 
 # --- Interpretation thresholds (configurable) --------------------------------
 #

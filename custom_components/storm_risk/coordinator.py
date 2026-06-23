@@ -84,10 +84,18 @@ from .const import (
     OUTLOOK_DAYS,
     ROAMING_REFRESH_DISTANCE_M,
     SCORE_CAP,
+    SOURCE_DIURNAL,
+    SOURCE_NONE,
+    SOURCE_SYNOPTIC,
+    SOURCE_UNKNOWN,
     TREND_HOLDING,
     TREND_STRENGTHENING,
     TREND_UNKNOWN,
     TREND_WEAKENING,
+    TRIGGER_AFTERNOON_END,
+    TRIGGER_AFTERNOON_START,
+    TRIGGER_PRESSURE_FALL_HPA,
+    TRIGGER_SOURCE_MIN_PROB,
     UPDATE_INTERVAL,
 )
 
@@ -147,6 +155,8 @@ class StormRiskData:
     cin_trend: str
     cin_trend_delta: float | None
     cap_state: str
+    # v3.4: best-effort trigger *type* (none/diurnal/synoptic/unknown).
+    trigger_source: str
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -298,6 +308,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         precip_prob: list[float | None] = (
             hourly.get("precipitation_probability") or []
         )
+        pressure: list[float | None] = hourly.get("pressure_msl") or []
 
         utc_offset_seconds = int(payload.get("utc_offset_seconds", 0))
         index = self._current_index(times, utc_offset_seconds)
@@ -323,6 +334,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cape_magnitude = _cape_magnitude(cape_now)
         cin_trend, cin_trend_delta = _cin_trend(cin, index)
         cap_state = _cap_state(cin_now)
+        trigger_source = _trigger_source(precip_prob, pressure, times, index)
 
         # Look-ahead window for the "today" sensors: find the peak CAPE and the
         # local time at which it occurs over the next LOOK_AHEAD_HOURS hours.
@@ -394,6 +406,7 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             cin_trend=cin_trend,
             cin_trend_delta=cin_trend_delta,
             cap_state=cap_state,
+            trigger_source=trigger_source,
             **scores,
         )
 
@@ -694,3 +707,50 @@ def _cap_state(cin: float) -> str:
     if cin >= CAP_UNLOCKED_CIN:
         return CAP_UNLOCKED
     return CAP_LOADABLE
+
+
+def _trigger_source(
+    precip: list[float | None],
+    pressure: list[float | None],
+    times: list[str],
+    index: int,
+) -> str:
+    """Best-effort classification of the forecast trigger type over 24h.
+
+    Only the kinds reliably derivable from a single grid point: ``none`` (no
+    meaningful precip probability), ``diurnal`` (afternoon-peaked with steady
+    pressure -- heating), or ``synoptic`` (falling pressure, or precip outside
+    the afternoon -- forced lift). Orographic / sea-breeze convergence are
+    deliberately not inferred. ``unknown`` when there's no precip data.
+    """
+    end = min(index + LOOK_AHEAD_HOURS, len(times))
+    best_pp: float | None = None
+    best_hour = 0
+    for i in range(index, end):
+        pp = _opt(precip, i)
+        if pp is None:
+            continue
+        if best_pp is None or pp > best_pp:
+            best_pp = pp
+            best_hour = int(times[i][11:13])
+
+    if best_pp is None:
+        return SOURCE_UNKNOWN
+    if best_pp < TRIGGER_SOURCE_MIN_PROB:
+        return SOURCE_NONE
+
+    # Pressure tendency across the window (falling => an approaching system).
+    p_start = _opt(pressure, index)
+    p_end = next(
+        (p for i in range(end - 1, index - 1, -1) if (p := _opt(pressure, i)) is not None),
+        None,
+    )
+    if p_start is not None and p_end is not None:
+        if (p_end - p_start) <= -TRIGGER_PRESSURE_FALL_HPA:
+            return SOURCE_SYNOPTIC
+
+    if TRIGGER_AFTERNOON_START <= best_hour <= TRIGGER_AFTERNOON_END:
+        return SOURCE_DIURNAL
+    # Meaningful precip outside the afternoon, pressure not clearly falling:
+    # not heating-driven, so attribute it to (weaker) synoptic forcing.
+    return SOURCE_SYNOPTIC

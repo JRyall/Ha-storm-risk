@@ -124,6 +124,8 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         icon="mdi:weather-pouring",
         suggested_display_precision=0,
         value_fn=lambda data: data.trigger,
+        # Best-effort trigger type: none / diurnal / synoptic / unknown.
+        attributes_fn=lambda data: {"source": data.trigger_source},
     ),
     StormRiskSensorDescription(
         key="storm_risk_outlook",
@@ -168,6 +170,7 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cape_magnitude": data.cape_magnitude,
             "cin_trend": data.cin_trend,
             "cap_state": data.cap_state,
+            "trigger_source": data.trigger_source,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },

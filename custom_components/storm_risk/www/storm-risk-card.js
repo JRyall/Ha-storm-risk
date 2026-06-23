@@ -50,6 +50,13 @@ const CIN_TRENDS = {
   weakening: "cap weakening ↓",
 };
 
+// Trigger type, appended to the trigger chip (e.g. "trigger 40% · diurnal").
+const TRIGGER_SOURCES = {
+  none: "none visible",
+  diurnal: "diurnal",
+  synoptic: "synoptic",
+};
+
 const INGREDIENTS = [
   {
     key: "cape_score",
@@ -196,7 +203,10 @@ class StormRiskCard extends HTMLElement {
       parts.push(`shear ${Number(attrs.shear).toFixed(0)} m/s`);
     }
     if (attrs.trigger !== undefined && attrs.trigger !== null) {
-      parts.push(`trigger ${Number(attrs.trigger).toFixed(0)}%`);
+      const src = TRIGGER_SOURCES[attrs.trigger_source];
+      parts.push(
+        `trigger ${Number(attrs.trigger).toFixed(0)}%${src ? ` ${src}` : ""}`
+      );
     }
     if (!parts.length) return "";
     return `<div class="context">${parts.join(" &middot; ")}</div>`;

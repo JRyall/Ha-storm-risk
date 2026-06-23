@@ -187,7 +187,22 @@ If the model returns no shear data the cap is skipped.
 **Trigger likelihood** (precipitation probability) is reported as its own
 sensor and shown on the card, but is deliberately kept **out** of the score:
 the score is environment *potential*; whether a trigger arrives is a separate
-axis, shown side by side rather than blended in.
+axis, shown side by side rather than blended in. The sensor also exposes a
+**`source`** attribute — a best-effort classification of the trigger *type*
+over the next 24 h (also `trigger_source` on the Storm risk sensor / card):
+
+- **`none`** — little or no precip probability in the window (the cap likely
+  holds).
+- **`diurnal`** — precipitation peaks in the afternoon with steady pressure
+  (classic afternoon-heating convection).
+- **`synoptic`** — pressure falling across the window, or precip outside the
+  afternoon (lift forced by an approaching front/trough rather than heating).
+
+> Only these three are inferred, because they're the ones reliably derivable
+> from a single grid point. **Orographic** (terrain-forced) and **convergence**
+> (sea-breeze/boundary) triggers are deliberately *not* guessed — they'd need
+> terrain-elevation and coastline data Open-Meteo doesn't provide per point, and
+> a wrong "sea breeze incoming" is worse than no label.
 
 The divisors/multiplier, the band thresholds, the shear cutoffs and the active
 threshold are all editable in the [options flow](#options).
