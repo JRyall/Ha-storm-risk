@@ -11,7 +11,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import logging
-from math import cos, radians, sin, sqrt
+from math import atan2, cos, degrees, radians, sin, sqrt
 from typing import Any
 
 from aiohttp import ClientError
@@ -43,6 +43,7 @@ from .const import (
     CIN_OFFSET,
     CIN_TREND_DEADBAND,
     CIN_TREND_HOURS,
+    COMPASS_POINTS,
     CONF_CAPE_DIVISOR,
     CONF_CAPE_GATE,
     CONF_CIN_DIVISOR,
@@ -70,6 +71,13 @@ from .const import (
     DOMAIN,
     EVENT_BAND_CHANGED,
     FORECAST_HOURS,
+    HAIL_CAPE_MIN,
+    HAIL_FAVOURABLE,
+    HAIL_FREEZING_LEVEL_MAX,
+    HAIL_POSSIBLE,
+    HAIL_SHEAR_MIN,
+    HAIL_UNKNOWN,
+    HAIL_UNLIKELY,
     LEVEL_LOADED,
     LEVEL_NONE,
     LEVEL_QUIET,
@@ -157,6 +165,13 @@ class StormRiskData:
     cap_state: str
     # v3.4: best-effort trigger *type* (none/diurnal/synoptic/unknown).
     trigger_source: str
+    # v3.5: storm dynamics (second card). Motion is the deep-layer steering
+    # vector storms would move *toward*; hail is a favourability flag.
+    storm_motion_dir: float | None
+    storm_motion_cardinal: str | None
+    storm_motion_speed: float | None
+    freezing_level: float | None
+    hail: str
 
 
 class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
@@ -305,10 +320,15 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         # raising on a missing key.
         ws_500: list[float | None] = hourly.get("wind_speed_500hPa") or []
         wd_500: list[float | None] = hourly.get("wind_direction_500hPa") or []
+        ws_700: list[float | None] = hourly.get("wind_speed_700hPa") or []
+        wd_700: list[float | None] = hourly.get("wind_direction_700hPa") or []
+        ws_300: list[float | None] = hourly.get("wind_speed_300hPa") or []
+        wd_300: list[float | None] = hourly.get("wind_direction_300hPa") or []
         precip_prob: list[float | None] = (
             hourly.get("precipitation_probability") or []
         )
         pressure: list[float | None] = hourly.get("pressure_msl") or []
+        freezing: list[float | None] = hourly.get("freezing_level_height") or []
 
         utc_offset_seconds = int(payload.get("utc_offset_seconds", 0))
         index = self._current_index(times, utc_offset_seconds)
@@ -335,6 +355,18 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
         cin_trend, cin_trend_delta = _cin_trend(cin, index)
         cap_state = _cap_state(cin_now)
         trigger_source = _trigger_source(precip_prob, pressure, times, index)
+
+        # Storm dynamics: deep-layer steering motion + hail favourability.
+        motion_dir, motion_speed = _storm_motion(
+            [
+                (_opt(ws_700, index), _opt(wd_700, index)),
+                (_opt(ws_500, index), _opt(wd_500, index)),
+                (_opt(ws_300, index), _opt(wd_300, index)),
+            ]
+        )
+        motion_cardinal = _cardinal(motion_dir)
+        freezing_level = _opt(freezing, index)
+        hail = _hail(cape_now, freezing_level, shear_now)
 
         # Look-ahead window for the "today" sensors: find the peak CAPE and the
         # local time at which it occurs over the next LOOK_AHEAD_HOURS hours.
@@ -407,6 +439,15 @@ class StormRiskCoordinator(DataUpdateCoordinator[StormRiskData]):
             cin_trend_delta=cin_trend_delta,
             cap_state=cap_state,
             trigger_source=trigger_source,
+            storm_motion_dir=None if motion_dir is None else round(motion_dir),
+            storm_motion_cardinal=motion_cardinal,
+            storm_motion_speed=(
+                None if motion_speed is None else round(motion_speed, 1)
+            ),
+            freezing_level=(
+                None if freezing_level is None else round(freezing_level)
+            ),
+            hail=hail,
             **scores,
         )
 
@@ -754,3 +795,55 @@ def _trigger_source(
     # Meaningful precip outside the afternoon, pressure not clearly falling:
     # not heating-driven, so attribute it to (weaker) synoptic forcing.
     return SOURCE_SYNOPTIC
+
+
+def _storm_motion(
+    levels: list[tuple[float | None, float | None]],
+) -> tuple[float | None, float | None]:
+    """Return the deep-layer steering (bearing storms move *toward*, speed).
+
+    Averages the available pressure-level winds (700/500/300 hPa) as u/v
+    vectors. The bearing is where storms would *move to* (0=N, 90=E); the speed
+    is the mean-wind magnitude. Returns (None, None) if no level has data.
+    Single cells track roughly with this; supercells deviate from it.
+    """
+    u_sum = v_sum = 0.0
+    count = 0
+    for speed, direction in levels:
+        if speed is None or direction is None:
+            continue
+        rad = radians(direction)
+        # Vector the air moves toward (meteorological dir is "from").
+        u_sum += -speed * sin(rad)
+        v_sum += -speed * cos(rad)
+        count += 1
+    if count == 0:
+        return None, None
+    u, v = u_sum / count, v_sum / count
+    bearing = degrees(atan2(u, v)) % 360.0
+    return bearing, sqrt(u * u + v * v)
+
+
+def _cardinal(bearing: float | None) -> str | None:
+    """Convert a bearing in degrees to a 16-point compass label."""
+    if bearing is None:
+        return None
+    return COMPASS_POINTS[int((bearing % 360) / 22.5 + 0.5) % 16]
+
+
+def _hail(cape: float, freezing_level: float | None, shear: float | None) -> str:
+    """Hail *favourability* from updraft (CAPE), cold aloft and shear.
+
+    Freezing level is a proxy for wet-bulb-zero height. This is a favourability
+    flag, not a probability. ``unknown`` when the freezing level is missing.
+    """
+    if freezing_level is None:
+        return HAIL_UNKNOWN
+    fuel = cape >= HAIL_CAPE_MIN
+    cold = freezing_level < HAIL_FREEZING_LEVEL_MAX
+    organised = shear is not None and shear >= HAIL_SHEAR_MIN
+    if fuel and cold and organised:
+        return HAIL_FAVOURABLE
+    if fuel and cold:
+        return HAIL_POSSIBLE
+    return HAIL_UNLIKELY

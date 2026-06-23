@@ -34,8 +34,13 @@ API_HOURLY_VARIABLES: Final = (
     "wind_direction_10m",
     "wind_speed_500hPa",
     "wind_direction_500hPa",
+    "wind_speed_700hPa",
+    "wind_direction_700hPa",
+    "wind_speed_300hPa",
+    "wind_direction_300hPa",
     "precipitation_probability",
     "pressure_msl",
+    "freezing_level_height",
 )
 
 # Wind speeds are requested in m/s so the derived bulk shear is in m/s, the
@@ -177,6 +182,26 @@ SOURCE_NONE: Final = "none"
 SOURCE_DIURNAL: Final = "diurnal"
 SOURCE_SYNOPTIC: Final = "synoptic"
 SOURCE_UNKNOWN: Final = "unknown"
+
+# --- Storm dynamics (second card): motion + hail favourability ---------------
+
+# Hail needs a strong updraft (CAPE), cold air aloft (a low freezing level, so
+# stones melt less on the way down) and shear (to sustain/recirculate the
+# updraft). Freezing level is used as the available proxy for wet-bulb-zero
+# height; this is a *favourability* flag, not a calibrated probability.
+HAIL_CAPE_MIN: Final = 1500.0            # J/kg
+HAIL_FREEZING_LEVEL_MAX: Final = 3500.0  # m
+HAIL_SHEAR_MIN: Final = 10.0             # m/s
+HAIL_UNLIKELY: Final = "unlikely"
+HAIL_POSSIBLE: Final = "possible"
+HAIL_FAVOURABLE: Final = "favourable"
+HAIL_UNKNOWN: Final = "unknown"
+
+# 16-point compass for labelling the storm-motion bearing.
+COMPASS_POINTS: Final = (
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+)
 
 # --- Interpretation thresholds (configurable) --------------------------------
 #

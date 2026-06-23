@@ -12,7 +12,12 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfSpeed, UnitOfTemperature
+from homeassistant.const import (
+    DEGREE,
+    PERCENTAGE,
+    UnitOfSpeed,
+    UnitOfTemperature,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -128,6 +133,27 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
         attributes_fn=lambda data: {"source": data.trigger_source},
     ),
     StormRiskSensorDescription(
+        key="storm_motion",
+        translation_key="storm_motion",
+        native_unit_of_measurement=DEGREE,
+        icon="mdi:sign-direction",
+        suggested_display_precision=0,
+        # Bearing storms would move *toward* (deep-layer steering wind).
+        value_fn=lambda data: data.storm_motion_dir,
+        attributes_fn=lambda data: {
+            "cardinal": data.storm_motion_cardinal,
+            "speed_ms": data.storm_motion_speed,
+        },
+    ),
+    StormRiskSensorDescription(
+        key="hail",
+        translation_key="hail",
+        icon="mdi:weather-hail",
+        # Favourability flag (unlikely/possible/favourable), not a probability.
+        value_fn=lambda data: data.hail,
+        attributes_fn=lambda data: {"freezing_level": data.freezing_level},
+    ),
+    StormRiskSensorDescription(
         key="storm_risk_outlook",
         translation_key="storm_risk_outlook",
         # Unitless 0-100 score, like the main Storm risk sensor.
@@ -171,6 +197,12 @@ SENSORS: tuple[StormRiskSensorDescription, ...] = (
             "cin_trend": data.cin_trend,
             "cap_state": data.cap_state,
             "trigger_source": data.trigger_source,
+            # Storm dynamics (for the Storm Dynamics card).
+            "storm_motion_dir": data.storm_motion_dir,
+            "storm_motion_cardinal": data.storm_motion_cardinal,
+            "storm_motion_speed": data.storm_motion_speed,
+            "freezing_level": data.freezing_level,
+            "hail": data.hail,
             # Next-24h series for ApexCharts / history graphing.
             "forecast": data.forecast,
         },

@@ -40,6 +40,8 @@ them into a single 0–100 score.
 | **CAPE max (7 day)** | J/kg | Highest CAPE anywhere in the next 7 days; per-day breakdown in attributes. |
 | **Wind shear** | m/s | Deep-layer (10 m → 500 hPa) bulk shear — how *organised* storms can get. A `mode` attribute classifies it (pulse / organised / supercell). |
 | **Trigger likelihood** | % | Precipitation probability for the current hour — a "will anything actually fire" cross-check. **Not** part of the score. |
+| **Storm motion** | ° | Approximate bearing storms would track *toward*, from the deep-layer (700–300 hPa) mean wind; `cardinal` and `speed_ms` in attributes. See [Storm Dynamics card](#storm-dynamics-card). |
+| **Hail favourability** | _text_ | `unlikely` / `possible` / `favourable` from CAPE + freezing level + shear. A favourability flag, **not** a probability. |
 | **Storm risk outlook (7 day)** | _score_ | Highest **storm-risk score** over the next 7 days; per-day breakdown in attributes. |
 | **Storm risk** | _score_ | Composite **0–100 ingredients score** from CAPE, CIN, and dew point (see below). Unitless — how loaded the atmosphere is, not a probability. |
 
@@ -343,6 +345,30 @@ entity: sensor.storm_risk_storm_risk
 # show_breakdown: true
 # show_forecast: true
 ```
+
+### Storm Dynamics card
+
+A second bundled card (`custom:storm-dynamics-card`) focuses on *where* and
+*what kind* — handy next to a lightning-map card for hit/miss reasoning:
+
+- **Storm motion** — a compass arrow pointing the way storms would track, from
+  the deep-layer (700–300 hPa) mean wind, with speed and cardinal. It's an
+  **approximate steering direction**: single cells follow it, but supercells
+  deviate, so it's labelled as such (not exact motion).
+- **Hail favourability** — `unlikely` / `possible` / `favourable`, from a strong
+  updraft (CAPE ≥ 1500 J/kg), cold air aloft (freezing level < 3500 m, used as a
+  proxy for wet-bulb-zero height) and shear (≥ 10 m/s). A **favourability flag,
+  not a probability**.
+
+```yaml
+type: custom:storm-dynamics-card
+entity: sensor.storm_risk_storm_risk
+# Optional: name: Storm Dynamics — Home
+```
+
+> It reads the same Storm Risk sensor, and (like the main card) hovering the
+> panel titles explains each read-out. Note it can't draw onto a third-party
+> lightning-map card — place it alongside one.
 
 > **Card not showing / "Custom element doesn't exist: storm-risk-card"?**
 > The card is auto-registered when the integration sets up, but two things can

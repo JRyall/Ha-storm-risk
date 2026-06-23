@@ -450,21 +450,210 @@ class StormRiskCard extends HTMLElement {
   }
 }
 
+// Hail favourability -> label + colour for the dynamics card.
+const HAIL_LEVELS = {
+  unlikely: { label: "Unlikely", color: "#43a047" },
+  possible: { label: "Possible", color: "#fb8c00" },
+  favourable: { label: "Favourable", color: "#e53935" },
+  unknown: { label: "Unknown", color: "var(--disabled-text-color)" },
+};
+
+/**
+ * Storm Dynamics card — a companion to the main Storm Risk card focused on
+ * *where* and *what kind*: the deep-layer steering motion (where storms would
+ * track, for hit/miss reasoning) and a hail-favourability read-out. Reads the
+ * same Storm Risk sensor's attributes.
+ */
+class StormDynamicsCard extends HTMLElement {
+  setConfig(config) {
+    this._config = {
+      name: "Storm Dynamics",
+      ...(config || {}),
+    };
+    this._root = this._root || this.attachShadow({ mode: "open" });
+    if (this._hass) this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  getCardSize() {
+    return 3;
+  }
+
+  static getStubConfig(hass) {
+    const ids = hass ? Object.keys(hass.states) : [];
+    const match = ids.find((id) => /^sensor\..+_storm_risk$/.test(id));
+    return { entity: match || "sensor.home_storm_risk" };
+  }
+
+  _render() {
+    if (!this._config) return;
+    const entityId = this._config.entity;
+    if (!entityId) {
+      this._root.innerHTML = `${this._styles()}
+        <ha-card header="Storm Dynamics"><div class="warn">Set
+        <code>entity:</code> to your Storm Risk sensor — e.g.
+        <code>sensor.home_storm_risk</code>.</div></ha-card>`;
+      return;
+    }
+    if (!this._hass) return;
+    const s = this._hass.states[entityId];
+    if (!s) {
+      this._root.innerHTML = `${this._styles()}
+        <ha-card header="${this._config.name}"><div class="warn">Entity
+        <code>${entityId}</code> not found.</div></ha-card>`;
+      return;
+    }
+    const a = s.attributes || {};
+    const unavailable = s.state === "unavailable" || s.state === "unknown";
+
+    this._root.innerHTML = `
+      ${this._styles()}
+      <ha-card>
+        <div class="title">${this._config.name}</div>
+        ${unavailable ? `<div class="warn">Unavailable</div>` : `
+          <div class="grid">
+            ${this._motion(a)}
+            ${this._hail(a)}
+          </div>`}
+      </ha-card>`;
+  }
+
+  _motion(a) {
+    const dir = a.storm_motion_dir;
+    const has = dir !== undefined && dir !== null;
+    const speed = a.storm_motion_speed;
+    const cardinal = a.storm_motion_cardinal || "";
+    const sub = has
+      ? `Toward ${cardinal}${
+          speed != null ? ` · ${Number(speed).toFixed(0)} m/s` : ""
+        }`
+      : "No steering data";
+    const arrow = has
+      ? `<g transform="rotate(${Number(dir)} 50 50)">
+           <line x1="50" y1="52" x2="50" y2="20" class="needle"></line>
+           <polygon points="50,12 44,26 56,26" class="needle"></polygon>
+         </g>`
+      : "";
+    return `
+      <div class="panel">
+        <div class="panel-title tip">Storm motion
+          <span class="tip-bubble" role="tooltip">Approximate direction storms
+          would track, from the deep-layer (700–300 hPa) mean wind. Single cells
+          follow this; <b>supercells deviate</b>. Not exact motion.</span>
+        </div>
+        <svg viewBox="0 0 100 100" class="compass">
+          <circle cx="50" cy="50" r="42" class="dial"></circle>
+          <text x="50" y="14" class="rose">N</text>
+          <text x="89" y="53" class="rose">E</text>
+          <text x="50" y="92" class="rose">S</text>
+          <text x="11" y="53" class="rose">W</text>
+          ${arrow}
+          <circle cx="50" cy="50" r="3" class="hub"></circle>
+        </svg>
+        <div class="panel-sub">${sub}</div>
+      </div>`;
+  }
+
+  _hail(a) {
+    const hail = HAIL_LEVELS[a.hail] || HAIL_LEVELS.unknown;
+    const factors = [];
+    if (a.cape != null) {
+      const mag = CAPE_MAGNITUDES[a.cape_magnitude];
+      factors.push(`CAPE ${Number(a.cape).toFixed(0)}${mag ? ` (${mag})` : ""}`);
+    }
+    if (a.freezing_level != null) {
+      factors.push(`freezing ${Number(a.freezing_level).toFixed(0)} m`);
+    }
+    if (a.shear != null) factors.push(`shear ${Number(a.shear).toFixed(0)} m/s`);
+    return `
+      <div class="panel">
+        <div class="panel-title tip">Hail
+          <span class="tip-bubble" role="tooltip">Favourability (not a
+          probability) from strong updraft (CAPE ≥ 1500), cold air aloft
+          (freezing level &lt; 3500 m) and shear (≥ 10 m/s).</span>
+        </div>
+        <div class="hail-badge" style="color:${hail.color}">
+          <span class="hail-dot" style="background:${hail.color}"></span>
+          ${hail.label}
+        </div>
+        <div class="panel-sub">${factors.join(" · ") || "—"}</div>
+      </div>`;
+  }
+
+  _styles() {
+    return `
+      <style>
+        ha-card { padding: 16px; }
+        .title { font-size: 1.1rem; font-weight: 500; margin-bottom: 10px;
+          color: var(--primary-text-color); }
+        .grid { display: flex; gap: 16px; }
+        .panel { flex: 1 1 0; display: flex; flex-direction: column;
+          align-items: center; text-align: center; gap: 6px; }
+        .panel-title { font-size: 0.85rem; color: var(--secondary-text-color);
+          position: relative; cursor: help;
+          border-bottom: 1px dotted var(--secondary-text-color); }
+        .panel-sub { font-size: 0.78rem; color: var(--secondary-text-color); }
+        .compass { width: 96px; height: 96px; }
+        .compass .dial { fill: none; stroke: var(--divider-color, #e0e0e0);
+          stroke-width: 2; }
+        .compass .rose { fill: var(--secondary-text-color); font-size: 11px;
+          text-anchor: middle; dominant-baseline: middle; }
+        .compass .needle { fill: var(--primary-color); stroke: var(--primary-color);
+          stroke-width: 3; stroke-linecap: round; }
+        .compass .hub { fill: var(--primary-color); }
+        .hail-badge { display: flex; align-items: center; gap: 8px;
+          font-size: 1.3rem; font-weight: 600; min-height: 96px; }
+        .hail-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .warn { color: var(--error-color); padding: 8px 0; }
+        .tip-bubble {
+          position: absolute; left: 50%; transform: translateX(-50%);
+          bottom: calc(100% + 8px); width: 210px; padding: 8px 10px;
+          box-sizing: border-box; border-radius: 8px;
+          background: var(--ha-card-background, var(--card-background-color, #fff));
+          color: var(--primary-text-color);
+          border: 1px solid var(--divider-color, #e0e0e0);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+          font-size: 0.72rem; font-weight: 400; line-height: 1.4;
+          white-space: normal; text-align: left;
+          opacity: 0; visibility: hidden; transition: opacity 0.15s ease;
+          z-index: 9; pointer-events: none;
+        }
+        .tip:hover .tip-bubble, .tip:focus .tip-bubble,
+        .tip:focus-visible .tip-bubble { opacity: 1; visibility: visible; }
+      </style>`;
+  }
+}
+
 // Guard against being loaded twice (e.g. both auto-registered by the
 // integration and added as a manual dashboard resource) -- defining the same
 // custom element a second time throws and would break the card.
 if (!customElements.get("storm-risk-card")) {
   customElements.define("storm-risk-card", StormRiskCard);
+  customElements.define("storm-dynamics-card", StormDynamicsCard);
 
   window.customCards = window.customCards || [];
-  window.customCards.push({
-    type: "storm-risk-card",
-    name: "Storm Risk Card",
-    description:
-      "Convective storm risk gauge with score breakdown and a 24h forecast sparkline.",
-    preview: true,
-    documentationURL: "https://github.com/JRyall/Ha-storm-risk",
-  });
+  window.customCards.push(
+    {
+      type: "storm-risk-card",
+      name: "Storm Risk Card",
+      description:
+        "Convective storm risk gauge with score breakdown and a 24h forecast sparkline.",
+      preview: true,
+      documentationURL: "https://github.com/JRyall/Ha-storm-risk",
+    },
+    {
+      type: "storm-dynamics-card",
+      name: "Storm Dynamics Card",
+      description:
+        "Companion card: approximate storm motion (steering) and hail favourability.",
+      preview: true,
+      documentationURL: "https://github.com/JRyall/Ha-storm-risk",
+    }
+  );
 
   console.info(
     "%c STORM-RISK-CARD %c loaded ",

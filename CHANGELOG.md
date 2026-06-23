@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-06-23
+
+### Added
+
+- **Storm Dynamics card** (`custom:storm-dynamics-card`) — a second bundled card
+  for *where* and *what kind*, to sit next to a lightning-map card:
+  - **Storm motion** — a compass arrow for the approximate direction storms
+    would track, from the deep-layer (700–300 hPa) mean wind, with speed and
+    cardinal. New **Storm motion** sensor (`cardinal` / `speed_ms` attributes).
+    Labelled approximate: single cells follow it, supercells deviate.
+  - **Hail favourability** — `unlikely` / `possible` / `favourable` from CAPE
+    (≥ 1500 J/kg), a low freezing level (< 3500 m, proxy for wet-bulb-zero) and
+    shear (≥ 10 m/s). New **Hail favourability** sensor. A favourability flag,
+    not a probability.
+  - Fetches 700/300 hPa winds and `freezing_level_height`; both degrade
+    gracefully (motion uses whatever levels are present; hail reads `unknown`
+    without a freezing level).
+
 ## [3.4.0] - 2026-06-23
 
 ### Added

@@ -90,6 +90,8 @@
       "cape_outlook": { "name": "CAPE max (7 day)" },
       "shear": { "name": "Wind shear" },
       "trigger": { "name": "Trigger likelihood" },
+      "storm_motion": { "name": "Storm motion" },
+      "hail": { "name": "Hail favourability" },
       "storm_risk_outlook": { "name": "Storm risk outlook (7 day)" },
       "storm_risk": { "name": "Storm risk" }
     }
