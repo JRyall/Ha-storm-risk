@@ -30,7 +30,25 @@ Convective storms need a few ingredients to come together: instability (energy
 for air to rise), a lack of a "lid" holding that energy down, and enough
 low-level moisture to feed developing clouds. This integration polls Open-Meteo
 for the relevant parameters and exposes them as sensors, then combines three of
-them into a single 0–100 score.
+them into a single 0–100 **ingredients score**, bucketed into five bands
+(**None / Quiet / Watch / Loaded / Severe**).
+
+It then adds the *context* that decides whether those loaded ingredients
+actually do anything:
+
+- **Wind shear** — how *organised* storms could get; too little caps the band at
+  "Watch" (pulse storms), so "Severe" means real organisation, not just heat.
+- **Cap state & trend** — whether the lid is `locked` / `loadable` / `unlocked`,
+  and whether it's strengthening or weakening (the "loaded gun" read).
+- **CAPE magnitude** — how maxed the fuel really is (`weak` → `extreme`), since
+  the score bar saturates around 1000 J/kg.
+- **Trigger forecast** — when a trigger is most likely over the next 24 h, and
+  its likely type (`none` / `diurnal` / `synoptic`).
+- **Storm motion & hail** — the approximate steering direction storms would
+  track, and whether hail is favoured — on a second bundled dashboard card.
+
+Everything is shown on two self-documenting Lovelace cards (hover anything for a
+plain-language explanation), and exposed as sensor attributes for automations.
 
 ### Sensors
 
