@@ -13,6 +13,11 @@ It's aimed at amateur meteorology enthusiasts, storm chasers, and anyone who
 likes knowing *why* the air feels like it might do something interesting later.
 The goal is to help you understand the ingredients, not just read a number.
 
+<p align="center">
+  <img src="docs/screenshots/storm-risk-card.png" width="70%"
+    alt="Storm Risk card: an 80/100 'Loaded' gauge, CAPE/CIN/dew-point breakdown bars, and a 24-hour stacked ingredient-mix sparkline">
+</p>
+
 > ⚠️ **This is a model forecast, not a nowcast or a warning service.** It is for
 > curiosity and education. Do **not** use it for safety-critical decisions. See
 > [Limitations](#limitations).
@@ -350,6 +355,11 @@ see *which* ingredient is driving the score over time. Hover (or focus) the
 gauge, the CAPE / CIN / Dew point labels, or the forecast title for a
 plain-language explanation of each.
 
+<p align="center">
+  <img src="docs/screenshots/tooltip.png" width="70%"
+    alt="Hovering the gauge reveals a tooltip: it's a 0–100 ingredients score, not a probability of a storm">
+</p>
+
 Add it from the dashboard card picker (search "Storm Risk"), or in YAML:
 
 ```yaml
@@ -369,6 +379,11 @@ entity: sensor.storm_risk_storm_risk
 
 A second bundled card (`custom:storm-dynamics-card`) focuses on *where* and
 *what kind* — handy next to a lightning-map card for hit/miss reasoning:
+
+<p align="center">
+  <img src="docs/screenshots/storm-dynamics-card.png" width="70%"
+    alt="Storm Dynamics card: a storm-motion compass pointing east and a hail-favourability read-out">
+</p>
 
 - **Storm motion** — a compass arrow pointing the way storms would track, from
   the deep-layer (700–300 hPa) mean wind, with speed and cardinal. It's an
