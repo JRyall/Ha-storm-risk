@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .mypy_cache/
+
+# ESPHome
+esphome/secrets.yaml
+esphome/.esphome/
+esphome/.esphome-*/

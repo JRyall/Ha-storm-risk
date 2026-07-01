@@ -1,0 +1,425 @@
+# =============================================================================
+# Waveshare ESP32-S3-AUDIO-Board  →  Home Assistant Voice Assistant satellite
+# =============================================================================
+# Product: https://www.waveshare.com/esp32-s3-audio-board.htm
+# Wiki:    https://www.waveshare.com/wiki/ESP32-S3-AUDIO-Board
+#
+# Hardware summary
+#   - ESP32-S3 (WROOM-1, 16 MB flash, 8 MB octal PSRAM)
+#   - ES8311   mono audio codec / DAC          -> speaker header   (I2C 0x18)
+#   - ES7210   4-channel audio ADC             -> dual-mic array   (I2C 0x40)
+#   - TCA9555  16-bit I/O expander             -> keys + PA enable (I2C 0x20)
+#   - PCF85063 RTC                             -> real-time clock  (I2C 0x51)
+#   - 7x WS2812 surround RGB LED ring          -> GPIO38
+#   - MP1605 buck, Li-ion charger, microSD, LCD/DVP camera headers
+#
+# The trick with this board
+#   The ES8311 DAC and ES7210 ADC share one physical I2S bus (BCLK + LRCLK).
+#   Only one device may drive those clock lines. We make the ES8311 the I2S
+#   *master* (force_master) so it generates BCLK/LRCLK continuously — including
+#   while the speaker is idle — which keeps the microphone (and therefore
+#   on-device wake-word detection) running at all times. The two ESP32 I2S
+#   peripherals are both configured as "secondary" (slaves) and share the clock
+#   pins via `allow_other_uses: true`.
+#
+#   Mainline ESPHome's `es8311` component cannot be forced into master mode, so
+#   we pull the patched component that adds `force_master` / `mclk_multiple`.
+#   Everything else (es7210, pca9554, i2s_audio, micro_wake_word, ...) is stock.
+#
+# Before flashing
+#   1. Create a secrets.yaml next to this file (see esphome/README.md) with
+#      wifi_ssid / wifi_password / api_encryption_key / ota_password.
+#   2. `esphome run waveshare-esp32-s3-audio.yaml`
+# =============================================================================
+
+substitutions:
+  name: waveshare-audio
+  friendly_name: "Waveshare Audio"
+
+  # ---- I2S bus (shared between ES8311 DAC and ES7210 ADC) ----
+  i2s_mclk_pin: GPIO12
+  i2s_bclk_pin: GPIO13
+  i2s_lrclk_pin: GPIO14
+  i2s_din_pin: GPIO15    # ES7210 -> ESP  (microphones)
+  i2s_dout_pin: GPIO16   # ESP -> ES8311  (speaker)
+
+  # ---- I2C control bus (codecs, IO expander, RTC) ----
+  i2c_sda_pin: GPIO11
+  i2c_scl_pin: GPIO10
+
+  # ---- RGB LED ring ----
+  rgb_pin: GPIO38
+  rgb_num_leds: "7"
+
+  # ---- Audio format ----
+  sample_rate: "16000"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  min_version: 2024.12.0
+  project:
+    name: waveshare.esp32-s3-audio-board
+    version: "1.0"
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+# 8 MB octal PSRAM — required to buffer audio + wake-word models.
+psram:
+  mode: octal
+  speed: 80MHz
+
+# The ES8311 fork adds master-mode support needed for the shared I2S bus.
+external_components:
+  - source:
+      type: git
+      url: https://github.com/sw3Dan/waveshare-s2-audio_esphome_voice
+      ref: main
+    components: [es8311]
+
+logger:
+  # UART0 logging is fine; audio is on I2S so it won't clash.
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${friendly_name} Setup"
+
+captive_portal:
+
+# =============================================================================
+# I2C — codecs, IO expander, RTC
+# =============================================================================
+i2c:
+  sda: ${i2c_sda_pin}
+  scl: ${i2c_scl_pin}
+  frequency: 400kHz
+  scan: true
+
+# TCA9555 16-bit I/O expander: 3 keys + speaker amplifier enable.
+pca9554:
+  - id: io_expander
+    address: 0x20
+    pin_count: 16
+
+# Real-time clock (optional but present on the board).
+time:
+  - platform: pcf85063
+    id: board_rtc
+    address: 0x51
+    # Keep the RTC disciplined from Home Assistant.
+    update_interval: never
+  - platform: homeassistant
+    id: ha_time
+    on_time_sync:
+      then:
+        - pcf85063.write_time:
+            id: board_rtc
+
+# =============================================================================
+# I2S audio buses (ES8311 DAC is master; both ESP peripherals are secondary)
+# =============================================================================
+i2s_audio:
+  # Output bus (speaker). MCLK lives here and is fed to/from the ES8311.
+  - id: i2s_out
+    i2s_lrclk_pin:
+      number: ${i2s_lrclk_pin}
+      allow_other_uses: true
+    i2s_bclk_pin:
+      number: ${i2s_bclk_pin}
+      allow_other_uses: true
+    i2s_mclk_pin: ${i2s_mclk_pin}
+
+  # Input bus (microphones) — shares BCLK/LRCLK with the output bus.
+  - id: i2s_in
+    i2s_lrclk_pin:
+      number: ${i2s_lrclk_pin}
+      allow_other_uses: true
+    i2s_bclk_pin:
+      number: ${i2s_bclk_pin}
+      allow_other_uses: true
+
+# =============================================================================
+# Codecs
+# =============================================================================
+# ES8311 speaker DAC — forced to I2S master so it drives BCLK/LRCLK for the
+# whole bus, keeping the microphone clocked even when nothing is playing.
+audio_dac:
+  - platform: es8311
+    id: es8311_dac
+    address: 0x18
+    sample_rate: ${sample_rate}
+    bits_per_sample: 16bit
+    use_mclk: true
+    mclk_multiple: 256
+    force_master: true
+
+# ES7210 microphone ADC — configured over I2C, audio streams in over I2S.
+audio_adc:
+  - platform: es7210
+    id: es7210_adc
+    address: 0x40
+    sample_rate: ${sample_rate}
+    bits_per_sample: 16bit
+    mic_gain: 30DB
+
+# =============================================================================
+# Microphone / Speaker / Media player
+# =============================================================================
+microphone:
+  - platform: i2s_audio
+    id: board_mic
+    i2s_audio_id: i2s_in
+    i2s_din_pin: ${i2s_din_pin}
+    adc_type: external
+    pdm: false
+    i2s_mode: secondary
+    sample_rate: ${sample_rate}
+    bits_per_sample: 16bit
+    channel: left
+
+speaker:
+  # Raw I2S sink driven by the ES8311.
+  - platform: i2s_audio
+    id: i2s_speaker
+    i2s_audio_id: i2s_out
+    i2s_dout_pin: ${i2s_dout_pin}
+    dac_type: external
+    audio_dac: es8311_dac
+    i2s_mode: secondary
+    sample_rate: ${sample_rate}
+    bits_per_sample: 16bit
+    channel: mono
+
+  # Mixer lets TTS announcements duck over any media that is playing.
+  - platform: mixer
+    id: mixer_speaker
+    output_speaker: i2s_speaker
+    num_channels: 1
+    source_speakers:
+      - id: media_mixer_input
+        # Media (music) input.
+      - id: announcement_mixer_input
+        # Voice-assistant / TTS announcement input.
+
+  # Resample HA media to the fixed 16 kHz bus rate.
+  - platform: resampler
+    id: media_speaker
+    output_speaker: media_mixer_input
+    sample_rate: ${sample_rate}
+  - platform: resampler
+    id: announcement_speaker
+    output_speaker: announcement_mixer_input
+    sample_rate: ${sample_rate}
+
+media_player:
+  - platform: speaker
+    id: board_media_player
+    name: Media Player
+    media_pipeline:
+      speaker: media_speaker
+      num_channels: 1
+    announcement_pipeline:
+      speaker: announcement_speaker
+      num_channels: 1
+
+# =============================================================================
+# Speaker power amplifier enable (TCA9555 EXIO08)
+# =============================================================================
+# The class-D amp is gated by EXIO08. Held on so the speaker is always ready;
+# invert/gate it in speaker automations if idle hiss bothers you.
+switch:
+  - platform: gpio
+    id: amp_enable
+    name: Amplifier
+    entity_category: config
+    restore_mode: ALWAYS_ON
+    pin:
+      pca9554: io_expander
+      number: 8
+      mode:
+        output: true
+
+# =============================================================================
+# Buttons — BOOT (GPIO0) + 3 capacitive keys on the TCA9555
+# =============================================================================
+binary_sensor:
+  - platform: gpio
+    id: boot_button
+    name: Boot Button
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+      inverted: true
+    on_multi_click:
+      # Triple-click BOOT toggles the voice assistant on/off.
+      - timing:
+          - ON for at most 1s
+          - OFF for at most 1s
+          - ON for at most 1s
+          - OFF for at most 1s
+          - ON for at most 1s
+        then:
+          - lambda: id(va).is_running() ? id(va).stop() : id(va).start();
+
+  - platform: gpio
+    id: key_volume_down
+    name: Key Volume Down
+    pin:
+      pca9554: io_expander
+      number: 9
+      mode:
+        input: true
+      inverted: true
+    on_press:
+      - media_player.volume_down: board_media_player
+
+  - platform: gpio
+    id: key_play_pause
+    name: Key Play/Pause
+    pin:
+      pca9554: io_expander
+      number: 10
+      mode:
+        input: true
+      inverted: true
+    on_press:
+      - media_player.toggle: board_media_player
+
+  - platform: gpio
+    id: key_volume_up
+    name: Key Volume Up
+    pin:
+      pca9554: io_expander
+      number: 11
+      mode:
+        input: true
+      inverted: true
+    on_press:
+      - media_player.volume_up: board_media_player
+
+# =============================================================================
+# RGB LED ring — visual voice-assistant feedback
+# =============================================================================
+light:
+  - platform: esp32_rmt_led_strip
+    id: led_ring
+    name: LED Ring
+    pin: ${rgb_pin}
+    num_leds: ${rgb_num_leds}
+    chipset: WS2812
+    rgb_order: GRB
+    default_transition_length: 100ms
+    effects:
+      - pulse:
+          name: "Listening"
+          transition_length: 250ms
+          update_interval: 250ms
+      - pulse:
+          name: "Thinking"
+          transition_length: 100ms
+          update_interval: 100ms
+
+# =============================================================================
+# Wake word + Voice Assistant
+# =============================================================================
+micro_wake_word:
+  id: mww
+  microphone:
+    microphone: board_mic
+  models:
+    - model: okay_nabu
+  on_wake_word_detected:
+    - voice_assistant.start:
+
+voice_assistant:
+  id: va
+  microphone:
+    microphone: board_mic
+  media_player: board_media_player
+  micro_wake_word: mww
+  use_wake_word: false   # wake word handled by micro_wake_word above
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 2.0
+
+  on_listening:
+    - light.turn_on:
+        id: led_ring
+        blue: 100%
+        red: 0%
+        green: 0%
+        effect: "Listening"
+  on_stt_vad_end:
+    - light.turn_on:
+        id: led_ring
+        blue: 60%
+        red: 60%
+        green: 0%
+        effect: "Thinking"
+  on_tts_start:
+    - light.turn_on:
+        id: led_ring
+        blue: 0%
+        red: 0%
+        green: 100%
+        effect: none
+  on_end:
+    - delay: 1s
+    - light.turn_off: led_ring
+  on_error:
+    - light.turn_on:
+        id: led_ring
+        red: 100%
+        green: 0%
+        blue: 0%
+        effect: none
+    - delay: 1s
+    - light.turn_off: led_ring
+  on_client_connected:
+    - micro_wake_word.start:
+  on_client_disconnected:
+    - voice_assistant.stop:
+    - micro_wake_word.stop:
+
+# =============================================================================
+# Diagnostics
+# =============================================================================
+sensor:
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+    entity_category: diagnostic
+
+  # Battery voltage on GPIO8 (Li-ion via on-board divider).
+  # NOTE: verify the divider ratio for your board revision and adjust the
+  # multiply filter accordingly (2.0 assumes a 1:1 divider).
+  - platform: adc
+    pin: GPIO8
+    name: Battery Voltage
+    attenuation: 12db
+    update_interval: 60s
+    entity_category: diagnostic
+    filters:
+      - multiply: 2.0
+
+button:
+  - platform: restart
+    name: Restart
+    entity_category: config
